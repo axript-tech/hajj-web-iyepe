@@ -4,13 +4,13 @@ session_start();
 require_once '../config/db.php';
 require_once '../config/constants.php';
 
-// Access Control
-if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'admin') {
-    // header("Location: ../index.php"); 
+// Access Control - STRICTLY ADMIN (Managers blocked)
+if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'admin') { 
+    header("Location: dashboard.php"); 
+    exit();
 }
 
-// Fetch All Payments with Member Names
-$sql = "SELECT p.*, m.full_name, m.passport_photo 
+// Analytics Queries
         FROM payments p 
         JOIN members m ON p.member_id = m.id 
         ORDER BY p.payment_date DESC";

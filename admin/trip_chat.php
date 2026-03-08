@@ -4,7 +4,7 @@ session_start();
 require_once '../config/db.php';
 require_once '../config/constants.php';
 
-if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'admin') { header("Location: ../index.php"); exit; }
+if (!isset($_SESSION['role']) || !in_array($_SESSION['role'], ['admin', 'manager'])) { header("Location: ../index.php"); exit; }
 
 // Fetch Batches
 $batches = $conn->query("SELECT id, batch_name, status FROM trip_batches ORDER BY start_date DESC");
@@ -229,12 +229,12 @@ $selected_batch = isset($_GET['batch_id']) ? intval($_GET['batch_id']) : 0;
         safeFetchJSON('../chat_api.php', { method: 'POST', body: fd })
         .then(res => {
             toggleLoading(false);
-            if(res.error) alert(res.error);
+            if(res.error) AppUI.toast(res.error, 'error');
             fetchChat(); 
         })
         .catch(err => {
             toggleLoading(false);
-            alert('Upload failed.');
+            AppUI.toast('Upload failed. Please check file size.', 'error');
         });
 
         // Reset input
@@ -245,7 +245,7 @@ $selected_batch = isset($_GET['batch_id']) ? intval($_GET['batch_id']) : 0;
     function shareLocation() {
         closeAttachMenu();
         if (!navigator.geolocation) {
-            alert("Geolocation is not supported by your browser.");
+            AppUI.alert("Geolocation is not supported by your browser.", "error");
             return;
         }
         
@@ -267,7 +267,7 @@ $selected_batch = isset($_GET['batch_id']) ? intval($_GET['batch_id']) : 0;
             },
             (error) => {
                 toggleLoading(false);
-                alert("Unable to retrieve location. Please ensure location services are enabled.");
+                AppUI.toast("Unable to retrieve location. Ensure location services are enabled.", "warning");
             }
         );
     }
@@ -289,7 +289,7 @@ $selected_batch = isset($_GET['batch_id']) ? intval($_GET['batch_id']) : 0;
         .then(res => {
             toggleLoading(false);
             if (res.error) {
-                alert(res.error);
+                AppUI.toast(res.error, 'error');
             } else {
                 msgInput.value = '';
                 fetchChat();
@@ -303,22 +303,23 @@ $selected_batch = isset($_GET['batch_id']) ? intval($_GET['batch_id']) : 0;
 
     // Action: Delete
     function deleteMsg(id) {
-        if(!confirm("Are you sure you want to delete this message? This will remove it from all pilgrim devices.")) return;
-        
-        const fd = new FormData();
-        fd.append('action', 'delete');
-        fd.append('msg_id', id);
+        AppUI.confirm("Are you sure you want to delete this message?<br>This will remove it from all pilgrim devices.", () => {
+            const fd = new FormData();
+            fd.append('action', 'delete');
+            fd.append('msg_id', id);
 
-        safeFetchJSON('../chat_api.php', { method: 'POST', body: fd })
-        .then(res => {
-            if (res.status === 'deleted') {
-                const el = document.getElementById('msg-'+id);
-                if (el) el.remove();
-            } else {
-                alert(res.error || "Failed to delete.");
-            }
-        })
-        .catch(err => console.error("Network Error:", err));
+            safeFetchJSON('../chat_api.php', { method: 'POST', body: fd })
+            .then(res => {
+                if (res.status === 'deleted') {
+                    const el = document.getElementById('msg-'+id);
+                    if (el) el.remove();
+                    AppUI.toast("Message deleted.", "success");
+                } else {
+                    AppUI.toast(res.error || "Failed to delete.", "error");
+                }
+            })
+            .catch(err => console.error("Network Error:", err));
+        });
     }
 
     // Initialize Polling

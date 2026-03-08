@@ -4,7 +4,7 @@ session_start();
 require_once '../config/db.php';
 require_once '../config/constants.php';
 
-if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'admin') { /* header("Location: ../index.php"); */ }
+if (!isset($_SESSION['role']) || !in_array($_SESSION['role'], ['admin', 'manager'])) { /* header("Location: ../index.php"); */ }
 
 // 1. Fetch Packages
 $packages = $conn->query("SELECT id, name FROM packages");

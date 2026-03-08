@@ -4,8 +4,8 @@ session_start();
 require_once '../config/db.php';
 require_once '../config/constants.php';
 
-// Access Control
-if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'admin') { header("Location: ../index.php"); exit(); }
+// Access Control - STRICTLY ADMIN
+if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'admin') { header("Location: dashboard.php"); exit(); }
 
 $msg = '';
 
