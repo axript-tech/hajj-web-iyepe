@@ -32,15 +32,15 @@ function send_hajj_mail($to_email, $to_name, $subject, $message_body) {
     try {
         // Server settings
         $mail->isSMTP();
-        $mail->Host       = 'smtp.gmail.com'; // Replace with your SMTP Host (e.g., mail.yourdomain.com)
+        $mail->Host       = 'smtp.hostinger.com'; // Replace with your SMTP Host (e.g., mail.yourdomain.com)
         $mail->SMTPAuth   = true;
-        $mail->Username   = 'axripts@gmail.com'; // Replace with SMTP Username
+        $mail->Username   = 'info@abdullateefhajjumrah.com'; // Replace with SMTP Username
         $mail->Password   = 'Science!';    // Replace with SMTP Password
         $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
-        $mail->Port       = 587;
+        $mail->Port       = 465;
 
         // Recipients
-        $mail->setFrom('axripts@gmail.com', 'ADam Zubair');
+        $mail->setFrom('info@abdullateefhajjumrah.com', 'Abdullateef Hajj & Umrah');
         $mail->addAddress($to_email, $to_name);
 
         // Branded HTML Template
@@ -59,7 +59,7 @@ function send_hajj_mail($to_email, $to_name, $subject, $message_body) {
                 <p style='font-size: 12px; color: #888888; text-align: center;'>
                     May Allah accept your ibadah.<br>
                     <strong>Abdullateef Support Team</strong><br>
-                    <a href='mailto:salam@abdullateef.ng' style='color: #1B7D75;'>salam@abdullateef.ng</a>
+                    <a href='mailto:info@abdullateefhajjumrah.com' style='color: #1B7D75;'>info@abdullateefhajjumrah.com</a>
                 </p>
             </div>
         </div>";
