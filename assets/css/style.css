@@ -1,0 +1,82 @@
+/* assets/css/style.css */
+
+@import url('https://fonts.googleapis.com/css2?family=Quicksand:wght@300;400;500;600;700&display=swap');
+
+body {
+    font-family: 'Quicksand', sans-serif;
+    -webkit-font-smoothing: antialiased;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+    width: 8px;
+}
+::-webkit-scrollbar-track {
+    background: #f1f1f1;
+}
+::-webkit-scrollbar-thumb {
+    background: #1B7D75;
+    border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: #145e58;
+}
+
+/* Form Focus States */
+input:focus, select:focus, textarea:focus {
+    outline: none;
+    border-color: #1B7D75;
+    box-shadow: 0 0 0 3px rgba(27, 125, 117, 0.1);
+}
+
+/* Print Optimization */
+@media print {
+    @page {
+        margin: 0.5cm;
+    }
+
+    body {
+        background: white;
+        color: black;
+    }
+
+    /* Hide Navigation and UI Elements */
+    nav, header, footer, .no-print, button, a.btn {
+        display: none !important;
+    }
+
+    /* ID Card Specifics */
+    .id-card {
+        border: 1px solid #000 !important;
+        page-break-inside: avoid;
+        margin: 0 auto;
+        /* Force background printing */
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+    }
+
+    /* Manifest Tables */
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 10pt;
+    }
+    
+    th, td {
+        border: 1px solid #000 !important;
+        padding: 4px 8px !important;
+    }
+
+    /* Ensure Colors Print */
+    .bg-green-100 { background-color: #d1fae5 !important; }
+    .bg-red-100 { background-color: #fee2e2 !important; }
+    .bg-yellow-100 { background-color: #fef3c7 !important; }
+    
+    .text-green-700 { color: #047857 !important; }
+    .text-red-700 { color: #b91c1c !important; }
+    
+    /* Reveal Expandable Content for Printing */
+    tr.hidden {
+        display: table-row !important;
+    }
+}

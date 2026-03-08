@@ -1,0 +1,1094 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>LASUFOCIT Boardroom OS</title>
+    
+    <!-- Google Fonts: Switched to Roboto for the OS look, keeping Quicksand available as fallback -->
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&family=Quicksand:wght@500;700&display=swap" rel="stylesheet">
+    
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- Tailwind CSS with Custom Config -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Roboto', 'sans-serif'],
+                        display: ['Quicksand', 'sans-serif'],
+                    },
+                    colors: {
+                        brand: {
+                            50: '#f0f4ff',
+                            100: '#e0e8ff',
+                            500: '#3b82f6',
+                            600: '#2563eb',
+                            900: '#1e3a8a',
+                        }
+                    },
+                    animation: {
+                        'pulse-fast': 'pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                    }
+                }
+            }
+        }
+
+        // Initialize Dark Mode based on preference
+        if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.add('dark')
+        } else {
+            document.documentElement.classList.remove('dark')
+        }
+    </script>
+    
+    <style>
+        /* --- OS Dashboard Variables & Theming --- */
+        :root {
+            --bg-gradient: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            --glass-bg: rgba(255, 255, 255, 0.85);
+            --glass-border: rgba(255, 255, 255, 0.5);
+            --text-primary: #1f2937;
+            --text-secondary: #6b7280;
+            --icon-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        html.dark {
+            --bg-gradient: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            --glass-bg: rgba(30, 41, 59, 0.7);
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --text-primary: #f3f4f6;
+            --text-secondary: #9ca3af;
+            --icon-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        body {
+            background: var(--bg-gradient);
+            color: var(--text-primary);
+            overscroll-behavior-y: contain; 
+            -webkit-tap-highlight-color: transparent;
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            transition: background 0.3s ease, color 0.3s ease;
+            overflow-x: hidden;
+        }
+
+        /* Hide scrollbar for category filters */
+        .scrollbar-hide::-webkit-scrollbar { display: none; }
+        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+
+        /* --- Header & Widget Section --- */
+        .dashboard-header {
+            width: 100%;
+            max-width: 800px;
+            padding: 40px 24px 20px;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            transition: opacity 0.3s, transform 0.3s;
+        }
+
+        .dashboard-header.hidden-view {
+            display: none;
+        }
+
+        .widget-clock {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-bottom: 24px;
+        }
+
+        #time {
+            font-size: 4rem;
+            font-weight: 300;
+            letter-spacing: -2px;
+            line-height: 1;
+            margin-bottom: 5px;
+            color: var(--text-primary);
+        }
+
+        #date {
+            font-size: 1rem;
+            color: var(--text-secondary);
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+        }
+
+        /* --- Search Bar --- */
+        .search-container {
+            width: 100%;
+            max-width: 500px;
+            position: relative;
+            margin-bottom: 20px;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 16px 20px 16px 45px;
+            border-radius: 30px;
+            border: 1px solid var(--glass-border);
+            background: var(--glass-bg);
+            backdrop-filter: blur(10px);
+            font-size: 1rem;
+            color: var(--text-primary);
+            outline: none;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+        }
+
+        .search-input:focus {
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+            transform: scale(1.02);
+            border-color: #3b82f6;
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+        }
+
+        /* --- App Grid / Drawer --- */
+        .app-drawer {
+            width: 100%;
+            max-width: 800px;
+            padding: 10px 20px 40px;
+            display: grid;
+            grid-template-columns: repeat(4, 1fr); 
+            gap: 24px 12px;
+            justify-items: center;
+            transition: opacity 0.3s;
+        }
+
+        /* --- App Item Styling --- */
+        .app-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-decoration: none;
+            width: 76px; 
+            cursor: pointer;
+            transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .app-item:hover { transform: translateY(-5px); }
+        .app-item:active { transform: scale(0.92); }
+
+        .app-icon {
+            width: 62px;
+            height: 62px;
+            border-radius: 18px; /* Squircle */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 26px;
+            color: white;
+            box-shadow: var(--icon-shadow);
+            margin-bottom: 8px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Subtle shine effect on icons */
+        .app-icon::after {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(to bottom right, rgba(255,255,255,0.4) 0%, rgba(255,255,255,0) 60%);
+            pointer-events: none;
+        }
+
+        .app-label {
+            font-size: 0.75rem;
+            color: var(--text-primary);
+            text-align: center;
+            font-weight: 500;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            width: 100%;
+            text-shadow: 0 1px 2px rgba(255,255,255,0.5);
+        }
+        html.dark .app-label { text-shadow: none; }
+
+        /* App Gradients */
+        .bg-blue { background: linear-gradient(135deg, #3b82f6, #2563eb); }
+        .bg-green { background: linear-gradient(135deg, #10b981, #059669); }
+        .bg-purple { background: linear-gradient(135deg, #8b5cf6, #7c3aed); }
+        .bg-orange { background: linear-gradient(135deg, #f59e0b, #d97706); }
+        .bg-red { background: linear-gradient(135deg, #ef4444, #dc2626); }
+        .bg-pink { background: linear-gradient(135deg, #ec4899, #be123c); }
+        .bg-dark-btn { background: linear-gradient(135deg, #4b5563, #1f2937); }
+
+        /* Responsive Breakpoints for Grid */
+        @media (max-width: 360px) {
+            .app-drawer { gap: 20px 8px; }
+            .app-icon { width: 56px; height: 56px; font-size: 24px; border-radius: 16px; }
+        }
+        @media (min-width: 600px) {
+            .app-drawer { grid-template-columns: repeat(5, 1fr); gap: 30px 20px; }
+            .app-item { width: 90px; }
+            .app-icon { width: 72px; height: 72px; border-radius: 22px; font-size: 32px; }
+            .app-label { font-size: 0.85rem; }
+        }
+        @media (min-width: 900px) {
+            .app-drawer { grid-template-columns: repeat(6, 1fr); }
+        }
+
+        /* Hidden States */
+        .hidden-app { display: none !important; }
+        .no-results { grid-column: 1 / -1; text-align: center; padding: 40px; color: var(--text-secondary); display: none; }
+
+        /* --- Sub-App View Management --- */
+        .app-view {
+            display: none;
+            width: 100%;
+            flex: 1;
+            flex-direction: column;
+            overflow-y: auto;
+            animation: fadeScaleIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+        .app-view.active { display: flex; }
+
+        @keyframes fadeScaleIn {
+            from { opacity: 0; transform: translateY(15px) scale(0.98); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+
+        /* Glassmorphism containers inside Apps */
+        .glass-panel {
+            background: var(--glass-bg);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--glass-border);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+        }
+        html.dark .glass-panel {
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(156, 163, 175, 0.5); border-radius: 10px; }
+
+        /* Specific Component Tweaks */
+        #camera-feed { transform: scaleX(-1); }
+        .scan-overlay.scanning {
+            border-color: #10b981;
+            animation: scanMove 2s infinite linear;
+            background: linear-gradient(to bottom, rgba(16, 185, 129, 0) 0%, rgba(16, 185, 129, 0.15) 50%, rgba(16, 185, 129, 0) 100%);
+            background-size: 100% 200%;
+        }
+        @keyframes scanMove { 0% { background-position: 0 -100%; } 100% { background-position: 0 200%; } }
+
+        /* Recording Pulse */
+        .recording-pulse { animation: pulse-ring 1.5s infinite cubic-bezier(0.215, 0.61, 0.355, 1); }
+        @keyframes pulse-ring {
+            0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.5); transform: scale(0.95); }
+            70% { box-shadow: 0 0 0 25px rgba(239, 68, 68, 0); transform: scale(1); }
+            100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); transform: scale(0.95); }
+        }
+
+        #toast { transition: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55); }
+        #toast.show { bottom: 40px; opacity: 1; visibility: visible; }
+        
+        /* Slideshow Smooth Transition */
+        #notice-slider {
+            transition: transform 0.6s cubic-bezier(0.25, 1, 0.5, 1);
+        }
+    </style>
+</head>
+<body>
+
+    <!-- OS Theme Toggle (Floating Top Right) -->
+    <button onclick="toggleTheme()" class="absolute top-6 right-6 z-50 w-10 h-10 flex items-center justify-center rounded-full bg-white/50 dark:bg-gray-800/50 backdrop-blur-md border border-gray-200/50 dark:border-gray-700/50 text-gray-700 dark:text-gray-200 hover:scale-110 transition-transform shadow-sm">
+        <i class="fa-solid fa-moon dark:hidden"></i>
+        <i class="fa-solid fa-sun hidden dark:block text-amber-400"></i>
+    </button>
+
+    <!-- OS DASHBOARD (Home View) -->
+    <div id="home-dashboard" class="w-full flex flex-col items-center">
+        <header class="dashboard-header">
+            <!-- LASU Logo -->
+            <img src="https://lasu.edu.ng/admissionletter-portal/diploma/images/icons/LASULOGO.gif" alt="LASU Logo" class="h-12 w-auto mb-6 object-contain drop-shadow-md">
+            
+            <div class="widget-clock">
+                <div id="time">12:00</div>
+                <div id="date">Monday, Jan 01</div>
+            </div>
+
+            <div class="search-container">
+                <i class="fas fa-search search-icon"></i>
+                <input type="text" class="search-input" id="appSearch" placeholder="Search boardroom apps...">
+            </div>
+        </header>
+
+        <main class="app-drawer" id="appDrawer">
+            <!-- Core Boardroom Apps -->
+            <a onclick="openApp('minutes', 'Smart Minutes')" class="app-item" data-name="smart minutes record ai meeting transcription">
+                <div class="app-icon bg-blue"><i class="fa-solid fa-microphone-lines"></i></div>
+                <span class="app-label">Smart Mins</span>
+            </a>
+
+            <a onclick="openApp('attendance', 'Face Register')" class="app-item" data-name="face register attendance camera staff">
+                <div class="app-icon bg-green"><i class="fa-solid fa-face-viewfinder"></i></div>
+                <span class="app-label">Attendance</span>
+            </a>
+
+            <a onclick="openApp('schedule', 'Meeting Schedule')" class="app-item" data-name="schedule meeting calendar time">
+                <div class="app-icon bg-orange"><i class="fa-regular fa-calendar-check"></i></div>
+                <span class="app-label">Schedule</span>
+            </a>
+
+            <a onclick="openApp('noticeboard', 'Notice Board')" class="app-item" data-name="notice board announcements news pin alert">
+                <div class="app-icon bg-pink"><i class="fa-solid fa-bullhorn"></i></div>
+                <span class="app-label">Notices</span>
+            </a>
+
+            <a onclick="openApp('archives', 'Boardroom Archives')" class="app-item" data-name="archives files records documents">
+                <div class="app-icon bg-red"><i class="fa-regular fa-folder-open"></i></div>
+                <span class="app-label">Archives</span>
+            </a>
+
+            <!-- Utility Apps to populate grid -->
+            <a onclick="showToast('Mail opening...')" class="app-item" data-name="mail email faculty inbox messages">
+                <div class="app-icon bg-purple"><i class="fa-solid fa-envelope"></i></div>
+                <span class="app-label">Faculty Mail</span>
+            </a>
+
+            <a onclick="showToast('Drive opening...')" class="app-item" data-name="drive cloud storage upload">
+                <div class="app-icon bg-blue"><i class="fab fa-google-drive"></i></div>
+                <span class="app-label">Cloud Drive</span>
+            </a>
+            
+            <a onclick="showToast('Directory opening...')" class="app-item" data-name="directory staff contacts phonebook">
+                <div class="app-icon bg-dark-btn"><i class="fa-solid fa-address-book"></i></div>
+                <span class="app-label">Directory</span>
+            </a>
+
+            <a onclick="showToast('Settings opened.')" class="app-item" data-name="settings config preferences os">
+                <div class="app-icon" style="background: linear-gradient(135deg, #9ca3af, #4b5563);"><i class="fa-solid fa-gear"></i></div>
+                <span class="app-label">Settings</span>
+            </a>
+
+            <div class="no-results" id="noResults">
+                <i class="fas fa-ghost" style="font-size: 2rem; margin-bottom: 10px; display: block;"></i>
+                No apps found
+            </div>
+        </main>
+    </div>
+
+    <!-- SUB-APP GLOBAL TOP BAR (Hidden on Dashboard) -->
+    <div id="sub-app-header" class="hidden w-full sticky top-0 z-40 bg-white/70 dark:bg-gray-900/70 backdrop-blur-xl border-b border-gray-200/50 dark:border-gray-800/50 px-5 py-4 flex items-center justify-center shadow-sm transition-all">
+        <button onclick="goHome()" class="absolute left-4 w-10 h-10 flex items-center justify-center rounded-full bg-gray-100/80 dark:bg-gray-800/80 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors backdrop-blur-sm">
+            <i class="fa-solid fa-arrow-left text-lg"></i>
+        </button>
+        <div class="text-center flex items-center gap-3">
+            <img src="https://lasu.edu.ng/admissionletter-portal/diploma/images/icons/LASULOGO.gif" alt="LASU" class="h-8 w-auto">
+            <h1 class="font-bold text-lg tracking-tight text-brand-600 dark:text-brand-400 font-display" id="top-title">App Name</h1>
+        </div>
+    </div>
+
+
+    <!-- ============================================== -->
+    <!-- INDIVIDUAL APP VIEWS -->
+    <!-- ============================================== -->
+
+    <!-- VIEW: SMART MINUTES -->
+    <div id="view-minutes" class="app-view p-4 md:p-6 w-full max-w-4xl mx-auto pb-10">
+        <div class="glass-panel flex flex-col h-full rounded-3xl p-5 overflow-hidden">
+            
+            <div class="bg-blue-50/80 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 p-4 rounded-2xl text-sm font-medium mb-5 flex items-start gap-3 border border-blue-100/50 dark:border-blue-800/30">
+                <i class="fa-solid fa-circle-info mt-0.5 text-blue-500"></i> 
+                <p>Record the meeting. When finished, AI will structure it into professional minutes automatically.</p>
+            </div>
+
+            <div class="flex-1 flex flex-col gap-5 relative">
+                <div class="flex-1 flex flex-col">
+                    <label class="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2 font-display">Live Transcript</label>
+                    <textarea id="live-transcript" class="w-full flex-1 min-h-[160px] md:min-h-[220px] p-5 bg-white/50 dark:bg-gray-900/50 text-gray-800 dark:text-gray-200 border border-gray-200 dark:border-gray-700 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 resize-none transition-all shadow-inner backdrop-blur-sm" placeholder="Transcription will appear here..."></textarea>
+                </div>
+
+                <div class="flex justify-center items-center py-2 relative">
+                    <hr class="absolute w-full border-gray-200 dark:border-gray-700 top-1/2 -z-10">
+                    <button id="mic-btn" class="w-16 h-16 rounded-full bg-red-500 hover:bg-red-600 text-white flex justify-center items-center text-2xl shadow-lg shadow-red-500/30 transition-all duration-300" onclick="toggleRecording()">
+                        <i class="fa-solid fa-microphone"></i>
+                    </button>
+                </div>
+
+                <button id="generate-btn" class="w-full bg-gradient-to-r from-gray-800 to-gray-900 dark:from-blue-600 dark:to-blue-700 text-white font-bold py-4 px-4 rounded-2xl transition-all shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed flex justify-center items-center" onclick="generateMinutes()" disabled>
+                    <i class="fa-solid fa-wand-magic-sparkles mr-2 text-amber-300"></i> Generate Official Minutes
+                </button>
+
+                <div id="output-container" class="hidden flex-col mt-4 animate-pulse-fast" style="animation-iteration-count: 1;">
+                    <div class="flex justify-between items-center mb-2 px-1">
+                        <label class="text-sm font-bold text-gray-700 dark:text-gray-300 font-display">Editable Minutes</label>
+                        <button onclick="copyMinutes()" class="text-blue-600 dark:text-blue-400 text-sm font-semibold hover:bg-blue-50 dark:hover:bg-blue-900/30 px-3 py-1 rounded-lg transition-colors flex items-center gap-2">
+                            <i class="fa-regular fa-copy"></i> Copy
+                        </button>
+                    </div>
+                    <div id="final-minutes" class="w-full min-h-[250px] p-6 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 border border-gray-200 dark:border-gray-700 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all prose dark:prose-invert max-w-none shadow-inner" contenteditable="true"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- VIEW: FACE ATTENDANCE -->
+    <div id="view-attendance" class="app-view p-4 md:p-6 w-full max-w-6xl mx-auto pb-10">
+        <div class="flex flex-col md:flex-row h-full gap-6 md:gap-8 items-stretch md:items-start">
+            
+            <div class="flex-1 w-full flex flex-col gap-5">
+                <div class="bg-emerald-50/80 dark:bg-emerald-900/20 text-emerald-800 dark:text-emerald-300 p-4 rounded-2xl text-sm font-medium flex items-center gap-3 border border-emerald-100/50 dark:border-emerald-800/30 glass-panel">
+                    <i class="fa-solid fa-camera text-emerald-600 dark:text-emerald-400 text-lg"></i> 
+                    <span>Position face in the frame to mark attendance.</span>
+                </div>
+
+                <div class="video-container relative rounded-3xl overflow-hidden bg-gray-900 shadow-2xl border-4 border-white/50 dark:border-gray-800 w-full aspect-[3/4] md:aspect-video flex-shrink-0">
+                    <video id="camera-feed" class="w-full h-full object-cover" autoplay playsinline></video>
+                    <div id="scan-overlay" class="absolute inset-0 border-4 border-transparent rounded-2xl pointer-events-none transition-colors duration-300 z-10"></div>
+                    
+                    <div class="absolute bottom-6 left-0 right-0 flex justify-center z-20">
+                        <button id="scan-btn" onclick="simulateFaceScan()" class="bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-3.5 px-8 rounded-full shadow-lg shadow-emerald-500/40 backdrop-blur-md transition-all active:scale-95 flex items-center gap-2 border border-emerald-400/50">
+                            <i class="fa-solid fa-face-viewfinder text-xl"></i> Scan Face
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="glass-panel rounded-3xl w-full md:w-96 flex flex-col overflow-hidden min-h-[350px] md:min-h-[600px] flex-shrink-0">
+                <div class="px-5 py-4 border-b border-gray-200/50 dark:border-gray-700/50 bg-white/40 dark:bg-gray-800/40 flex justify-between items-center">
+                    <span class="font-bold text-gray-800 dark:text-gray-200 font-display">Present Staff</span>
+                    <span id="attendance-count" class="bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-400 font-bold py-1 px-3 rounded-full text-xs border border-emerald-200 dark:border-emerald-800/50">0</span>
+                </div>
+                <ul id="attendance-list" class="overflow-y-auto p-3 flex-1 relative h-full space-y-2">
+                    <li class="text-center text-gray-400 dark:text-gray-500 text-sm font-medium italic absolute inset-0 flex flex-col items-center justify-center gap-3" id="empty-state">
+                        <i class="fa-solid fa-users-slash text-3xl opacity-50"></i>
+                        No scans yet today.
+                    </li>
+                </ul>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- VIEW: SCHEDULE -->
+    <div id="view-schedule" class="app-view p-4 md:p-6 w-full max-w-2xl mx-auto pb-10">
+        <div class="flex flex-col h-full gap-5">
+            <button onclick="showToast('New meeting modal opened.')" class="w-full bg-gradient-to-r from-orange-400 to-orange-500 hover:from-orange-500 hover:to-orange-600 text-white font-bold py-4 px-4 rounded-2xl transition-all shadow-lg shadow-orange-500/30 flex justify-center items-center gap-2">
+                <i class="fa-solid fa-plus"></i> Schedule New Meeting
+            </button>
+
+            <div class="flex-1 flex flex-col gap-4">
+                <h3 class="font-bold text-gray-700 dark:text-gray-300 text-sm px-1 font-display">Upcoming Meetings</h3>
+                
+                <div class="glass-panel p-5 rounded-3xl transition hover:-translate-y-1 hover:shadow-xl cursor-pointer">
+                    <div class="flex justify-between items-start mb-3">
+                        <div class="bg-orange-100/80 dark:bg-orange-900/40 text-orange-700 dark:text-orange-400 text-xs font-bold px-3 py-1 rounded-full border border-orange-200 dark:border-orange-800/30">
+                            Faculty Board
+                        </div>
+                        <i class="fa-solid fa-ellipsis-vertical text-gray-400 p-1"></i>
+                    </div>
+                    <h4 class="font-bold text-lg text-gray-800 dark:text-gray-100 mb-1">End of Semester Review</h4>
+                    <p class="text-sm text-gray-500 dark:text-gray-400 flex items-center gap-2 mb-4">
+                        <i class="fa-regular fa-clock"></i> Thu, Feb 26 • 10:00 AM
+                    </p>
+                    <div class="flex justify-between items-center pt-4 border-t border-gray-200/50 dark:border-gray-700/50">
+                        <div class="flex -space-x-2">
+                            <div class="w-8 h-8 rounded-full bg-blue-100 border-2 border-white dark:border-gray-800 flex items-center justify-center text-xs font-bold text-blue-700">OA</div>
+                            <div class="w-8 h-8 rounded-full bg-green-100 border-2 border-white dark:border-gray-800 flex items-center justify-center text-xs font-bold text-green-700">KI</div>
+                            <div class="w-8 h-8 rounded-full bg-gray-200 border-2 border-white dark:border-gray-800 flex items-center justify-center text-xs font-bold text-gray-700">+8</div>
+                        </div>
+                        <span class="text-orange-600 dark:text-orange-400 text-sm font-bold">Details <i class="fa-solid fa-chevron-right text-xs ml-1"></i></span>
+                    </div>
+                </div>
+
+                <div class="glass-panel p-5 rounded-3xl transition hover:-translate-y-1 hover:shadow-xl cursor-pointer">
+                    <div class="flex justify-between items-start mb-3">
+                        <div class="bg-blue-100/80 dark:bg-blue-900/40 text-blue-700 dark:text-blue-400 text-xs font-bold px-3 py-1 rounded-full border border-blue-200 dark:border-blue-800/30">
+                            Departmental
+                        </div>
+                        <i class="fa-solid fa-ellipsis-vertical text-gray-400 p-1"></i>
+                    </div>
+                    <h4 class="font-bold text-lg text-gray-800 dark:text-gray-100 mb-1">Curriculum Update Strategy</h4>
+                    <p class="text-sm text-gray-500 dark:text-gray-400 flex items-center gap-2 mb-4">
+                        <i class="fa-regular fa-clock"></i> Mon, Mar 2 • 1:00 PM
+                    </p>
+                    <div class="flex justify-between items-center pt-4 border-t border-gray-200/50 dark:border-gray-700/50">
+                        <div class="flex -space-x-2">
+                            <div class="w-8 h-8 rounded-full bg-purple-100 border-2 border-white dark:border-gray-800 flex items-center justify-center text-xs font-bold text-purple-700">TJ</div>
+                            <div class="w-8 h-8 rounded-full bg-pink-100 border-2 border-white dark:border-gray-800 flex items-center justify-center text-xs font-bold text-pink-700">SO</div>
+                        </div>
+                        <span class="text-blue-600 dark:text-blue-400 text-sm font-bold">Details <i class="fa-solid fa-chevron-right text-xs ml-1"></i></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- VIEW: NOTICE BOARD (NEW) -->
+    <div id="view-noticeboard" class="app-view p-4 md:p-6 w-full max-w-5xl mx-auto pb-10">
+        <div class="flex flex-col h-full gap-5 md:gap-6">
+            
+            <!-- Action Bar -->
+            <button onclick="showToast('New notice modal opened.')" class="w-full bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 text-white font-bold py-4 px-4 rounded-2xl transition-all shadow-lg shadow-pink-500/30 flex justify-center items-center gap-2">
+                <i class="fa-solid fa-bullhorn"></i> Post Faculty Announcement
+            </button>
+
+            <!-- Category Filters -->
+            <div class="flex gap-2 overflow-x-auto pb-2 scrollbar-hide w-full font-display text-sm">
+                <button class="bg-blue-600 text-white px-4 py-1.5 rounded-full font-bold whitespace-nowrap shadow-sm">All Notices</button>
+                <button class="bg-white/50 dark:bg-gray-800/50 hover:bg-blue-100 dark:hover:bg-blue-900/30 text-gray-700 dark:text-gray-300 px-4 py-1.5 rounded-full font-bold whitespace-nowrap transition-colors border border-gray-200/50 dark:border-gray-700/50">Academic Affairs</button>
+                <button class="bg-white/50 dark:bg-gray-800/50 hover:bg-amber-100 dark:hover:bg-amber-900/30 text-gray-700 dark:text-gray-300 px-4 py-1.5 rounded-full font-bold whitespace-nowrap transition-colors border border-gray-200/50 dark:border-gray-700/50">Administrative</button>
+                <button class="bg-white/50 dark:bg-gray-800/50 hover:bg-purple-100 dark:hover:bg-purple-900/30 text-gray-700 dark:text-gray-300 px-4 py-1.5 rounded-full font-bold whitespace-nowrap transition-colors border border-gray-200/50 dark:border-gray-700/50">Career & Opps</button>
+                <button class="bg-white/50 dark:bg-gray-800/50 hover:bg-green-100 dark:hover:bg-green-900/30 text-gray-700 dark:text-gray-300 px-4 py-1.5 rounded-full font-bold whitespace-nowrap transition-colors border border-gray-200/50 dark:border-gray-700/50">Events</button>
+                <button class="bg-white/50 dark:bg-gray-800/50 hover:bg-red-100 dark:hover:bg-red-900/30 text-gray-700 dark:text-gray-300 px-4 py-1.5 rounded-full font-bold whitespace-nowrap transition-colors border border-gray-200/50 dark:border-gray-700/50">Urgent & Alerts</button>
+            </div>
+
+            <!-- Featured Slideshow Component -->
+            <div class="relative w-full h-64 md:h-96 rounded-3xl overflow-hidden shadow-lg group border border-gray-200/50 dark:border-gray-700/50">
+                
+                <!-- Slide Track -->
+                <div id="notice-slider" class="w-full h-full flex">
+                    
+                    <!-- Slide 1: Birthday Celebration (Image Element) -->
+                    <div class="w-full h-full flex-shrink-0 relative">
+                        <!-- High quality stock image for Birthday -->
+                        <img src="https://images.unsplash.com/photo-1530103862676-de88b6b08fd3?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80" alt="Birthday Celebration" class="w-full h-full object-cover">
+                        <!-- Gradient Overlay for text readability -->
+                        <div class="absolute inset-0 bg-gradient-to-t from-gray-900 via-gray-900/60 to-transparent flex flex-col justify-end p-6 md:p-10">
+                            <span class="bg-pink-500 text-white text-[10px] md:text-xs font-bold px-3 py-1 rounded-full uppercase tracking-widest w-max mb-3 shadow-md">
+                                <i class="fa-solid fa-cake-candles mr-1"></i> Celebrations
+                            </span>
+                            <h2 class="text-white text-2xl md:text-4xl font-bold mb-2 font-display">Happy Birthday, Prof. O. A. Adebayo!</h2>
+                            <p class="text-gray-200 text-sm md:text-lg max-w-2xl">Wishing our esteemed Dean a wonderful birthday and a prosperous year ahead. Thank you for your continued leadership!</p>
+                        </div>
+                    </div>
+
+                    <!-- Slide 2: Urgent Notice (Text + Icon) -->
+                    <div class="w-full h-full flex-shrink-0 relative bg-gradient-to-br from-red-600 to-rose-700 flex items-center justify-center p-6 md:p-10">
+                        <div class="absolute inset-0 opacity-10 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')]"></div>
+                        <div class="text-center relative z-10">
+                            <i class="fa-solid fa-triangle-exclamation text-5xl md:text-7xl text-white mb-6 animate-pulse"></i>
+                            <span class="block bg-black/20 text-white text-[10px] md:text-xs font-bold px-3 py-1 rounded-full uppercase tracking-widest w-max mx-auto mb-3">
+                                Urgent & Alerts
+                            </span>
+                            <h2 class="text-white text-3xl md:text-5xl font-bold mb-3 font-display">Faculty Network Outage</h2>
+                            <p class="text-red-100 text-base md:text-xl max-w-3xl mx-auto">Central server room maintenance this weekend. Expect complete portal and WiFi outages from Saturday 10 PM to Sunday 4 AM.</p>
+                        </div>
+                    </div>
+
+                    <!-- Slide 3: Event Notice (Text + Icon) -->
+                    <div class="w-full h-full flex-shrink-0 relative bg-gradient-to-br from-purple-700 to-blue-600 flex items-center justify-center p-6 md:p-10">
+                        <div class="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2"></div>
+                        <div class="text-center relative z-10">
+                            <i class="fa-solid fa-briefcase text-5xl md:text-7xl text-white mb-6"></i>
+                            <span class="block bg-black/20 text-white text-[10px] md:text-xs font-bold px-3 py-1 rounded-full uppercase tracking-widest w-max mx-auto mb-3">
+                                Career & Opportunities
+                            </span>
+                            <h2 class="text-white text-3xl md:text-5xl font-bold mb-3 font-display">Tech Career Fair 2026</h2>
+                            <p class="text-purple-100 text-base md:text-xl max-w-3xl mx-auto">Partner companies including Google, Microsoft, and Paystack will be at the main auditorium for internship recruitments. Come with copies of your CV!</p>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- Navigation Controls -->
+                <button onclick="prevSlide()" class="absolute left-4 top-1/2 -translate-y-1/2 bg-black/30 hover:bg-black/60 text-white w-10 h-10 md:w-12 md:h-12 rounded-full flex items-center justify-center backdrop-blur-md opacity-0 group-hover:opacity-100 transition-opacity focus:opacity-100 z-20">
+                    <i class="fa-solid fa-chevron-left"></i>
+                </button>
+                <button onclick="nextSlide()" class="absolute right-4 top-1/2 -translate-y-1/2 bg-black/30 hover:bg-black/60 text-white w-10 h-10 md:w-12 md:h-12 rounded-full flex items-center justify-center backdrop-blur-md opacity-0 group-hover:opacity-100 transition-opacity focus:opacity-100 z-20">
+                    <i class="fa-solid fa-chevron-right"></i>
+                </button>
+                
+                <!-- Slide Indicators -->
+                <div class="absolute bottom-4 md:bottom-6 left-1/2 -translate-x-1/2 flex gap-2 z-20" id="slide-indicators">
+                    <div class="w-6 h-1.5 rounded-full bg-white transition-all duration-300"></div>
+                    <div class="w-1.5 h-1.5 rounded-full bg-white/50 transition-all duration-300"></div>
+                    <div class="w-1.5 h-1.5 rounded-full bg-white/50 transition-all duration-300"></div>
+                </div>
+            </div>
+
+            <!-- Regular Notices Grid (Static History) -->
+            <div class="flex justify-between items-end mt-2">
+                <h3 class="font-bold text-gray-700 dark:text-gray-300 text-sm px-1 font-display">Older Updates</h3>
+                <button class="text-blue-600 dark:text-blue-400 text-xs font-bold hover:underline">View All</button>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-5">
+                
+                <!-- Notice 1: Academic -->
+                <div class="glass-panel p-5 rounded-3xl transition hover:-translate-y-1 hover:shadow-xl cursor-pointer flex flex-col h-full border-l-4 border-l-blue-500">
+                    <div class="flex justify-between items-start mb-3">
+                        <div class="flex flex-wrap gap-2">
+                            <span class="bg-blue-100/80 dark:bg-blue-900/40 text-blue-700 dark:text-blue-400 text-[10px] font-bold px-2 py-1 rounded-md uppercase tracking-wide">Academic Affairs</span>
+                            <span class="bg-gray-100/80 dark:bg-gray-800/60 text-gray-600 dark:text-gray-300 text-[10px] font-bold px-2 py-1 rounded-md uppercase tracking-wide">Exam Timetable</span>
+                        </div>
+                        <i class="fa-regular fa-bookmark text-gray-400 hover:text-blue-500 transition-colors text-lg"></i>
+                    </div>
+                    <h4 class="font-bold text-[17px] text-gray-800 dark:text-gray-100 mb-2">Revised Mid-Term Exam Schedule</h4>
+                    <p class="text-sm text-gray-500 dark:text-gray-400 mb-4 flex-1">Due to the recent public holiday declaration, the CSC301 and ITE312 mid-term examinations have been shifted to Thursday. Venues remain unchanged.</p>
+                    <div class="flex justify-between items-center border-t border-gray-200/50 dark:border-gray-700/50 pt-3">
+                        <span class="text-xs text-gray-400 dark:text-gray-500"><i class="fa-solid fa-chalkboard-user mr-1"></i> Exam Committee</span>
+                        <span class="text-xs text-gray-400 dark:text-gray-500">Yesterday</span>
+                    </div>
+                </div>
+
+                <!-- Notice 2: Administrative -->
+                <div class="glass-panel p-5 rounded-3xl transition hover:-translate-y-1 hover:shadow-xl cursor-pointer flex flex-col h-full border-l-4 border-l-amber-500">
+                    <div class="flex justify-between items-start mb-3">
+                        <div class="flex flex-wrap gap-2">
+                            <span class="bg-amber-100/80 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400 text-[10px] font-bold px-2 py-1 rounded-md uppercase tracking-wide">Administrative</span>
+                            <span class="bg-gray-100/80 dark:bg-gray-800/60 text-gray-600 dark:text-gray-300 text-[10px] font-bold px-2 py-1 rounded-md uppercase tracking-wide">Fees</span>
+                        </div>
+                        <i class="fa-regular fa-bookmark text-gray-400 hover:text-blue-500 transition-colors text-lg"></i>
+                    </div>
+                    <h4 class="font-bold text-[17px] text-gray-800 dark:text-gray-100 mb-2">Tuition Clearance Deadline</h4>
+                    <p class="text-sm text-gray-500 dark:text-gray-400 mb-4 flex-1">Final reminder: The late registration portal closes definitively this Friday. Ensure all fee dockets are signed by your level advisers before the deadline.</p>
+                    <div class="flex justify-between items-center border-t border-gray-200/50 dark:border-gray-700/50 pt-3">
+                        <span class="text-xs text-gray-400 dark:text-gray-500"><i class="fa-solid fa-building-columns mr-1"></i> Dean's Office</span>
+                        <span class="text-xs text-gray-400 dark:text-gray-500">Feb 12, 2026</span>
+                    </div>
+                </div>
+                
+                 <!-- Notice 3: Campus Life -->
+                 <div class="glass-panel p-5 rounded-3xl transition hover:-translate-y-1 hover:shadow-xl cursor-pointer flex flex-col h-full border-l-4 border-l-green-500">
+                    <div class="flex justify-between items-start mb-3">
+                        <div class="flex flex-wrap gap-2">
+                            <span class="bg-green-100/80 dark:bg-green-900/40 text-green-700 dark:text-green-400 text-[10px] font-bold px-2 py-1 rounded-md uppercase tracking-wide">Campus Life</span>
+                            <span class="bg-gray-100/80 dark:bg-gray-800/60 text-gray-600 dark:text-gray-300 text-[10px] font-bold px-2 py-1 rounded-md uppercase tracking-wide">Sports</span>
+                        </div>
+                        <i class="fa-regular fa-bookmark text-gray-400 hover:text-blue-500 transition-colors text-lg"></i>
+                    </div>
+                    <h4 class="font-bold text-[17px] text-gray-800 dark:text-gray-100 mb-2">Inter-Departmental Football Tryouts</h4>
+                    <p class="text-sm text-gray-500 dark:text-gray-400 mb-4 flex-1">The Faculty sports director is calling on all interested players to report to the main field by 4:00 PM for the upcoming Vice Chancellor's Cup tryouts.</p>
+                    <div class="flex justify-between items-center border-t border-gray-200/50 dark:border-gray-700/50 pt-3">
+                        <span class="text-xs text-gray-400 dark:text-gray-500"><i class="fa-solid fa-futbol mr-1"></i> Student Union</span>
+                        <span class="text-xs text-gray-400 dark:text-gray-500">Feb 10, 2026</span>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- VIEW: ARCHIVES -->
+    <div id="view-archives" class="app-view p-4 md:p-6 w-full max-w-2xl mx-auto pb-10">
+        <div class="flex flex-col h-full gap-5">
+            <div class="relative w-full">
+                <i class="fa-solid fa-magnifying-glass absolute left-5 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                <input type="text" placeholder="Search past minutes & documents..." class="w-full bg-white/70 dark:bg-gray-900/70 backdrop-blur-md border border-gray-200/50 dark:border-gray-700/50 text-gray-800 dark:text-gray-200 rounded-3xl py-4 pl-14 pr-5 focus:outline-none focus:ring-2 focus:ring-red-500/50 transition-all shadow-sm">
+            </div>
+
+            <div class="flex-1 flex flex-col gap-3">
+                <h3 class="font-bold text-gray-700 dark:text-gray-300 text-sm px-1 font-display">Recent Documents</h3>
+                
+                <div class="glass-panel p-4 md:p-5 rounded-2xl flex items-center gap-4 hover:bg-white/90 dark:hover:bg-gray-800/90 cursor-pointer transition-all hover:scale-[1.01]" onclick="showToast('Opening Document...')">
+                    <div class="w-12 h-12 md:w-14 md:h-14 rounded-xl bg-red-100/80 dark:bg-red-900/30 text-red-600 dark:text-red-400 flex justify-center items-center text-xl md:text-2xl shrink-0 shadow-sm">
+                        <i class="fa-solid fa-file-pdf"></i>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <h4 class="font-bold text-gray-800 dark:text-gray-200 truncate md:text-lg">Senate Preparatory Meeting</h4>
+                        <p class="text-xs md:text-sm text-gray-500 dark:text-gray-400 mt-1">Feb 12, 2026 • 2.4 MB</p>
+                    </div>
+                    <button class="w-10 h-10 rounded-full bg-gray-100/50 dark:bg-gray-800/50 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 flex items-center justify-center transition-colors">
+                        <i class="fa-solid fa-download"></i>
+                    </button>
+                </div>
+
+                <div class="glass-panel p-4 md:p-5 rounded-2xl flex items-center gap-4 hover:bg-white/90 dark:hover:bg-gray-800/90 cursor-pointer transition-all hover:scale-[1.01]" onclick="showToast('Opening Document...')">
+                    <div class="w-12 h-12 md:w-14 md:h-14 rounded-xl bg-blue-100/80 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 flex justify-center items-center text-xl md:text-2xl shrink-0 shadow-sm">
+                        <i class="fa-solid fa-file-word"></i>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <h4 class="font-bold text-gray-800 dark:text-gray-200 truncate md:text-lg">Staff Welfare Committee</h4>
+                        <p class="text-xs md:text-sm text-gray-500 dark:text-gray-400 mt-1">Jan 28, 2026 • 1.1 MB</p>
+                    </div>
+                    <button class="w-10 h-10 rounded-full bg-gray-100/50 dark:bg-gray-800/50 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 flex items-center justify-center transition-colors">
+                        <i class="fa-solid fa-download"></i>
+                    </button>
+                </div>
+
+                <div class="glass-panel p-4 md:p-5 rounded-2xl flex items-center gap-4 hover:bg-white/90 dark:hover:bg-gray-800/90 cursor-pointer transition-all hover:scale-[1.01]" onclick="showToast('Opening Document...')">
+                    <div class="w-12 h-12 md:w-14 md:h-14 rounded-xl bg-red-100/80 dark:bg-red-900/30 text-red-600 dark:text-red-400 flex justify-center items-center text-xl md:text-2xl shrink-0 shadow-sm">
+                        <i class="fa-solid fa-file-pdf"></i>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <h4 class="font-bold text-gray-800 dark:text-gray-200 truncate md:text-lg">Q4 2025 Faculty Briefing</h4>
+                        <p class="text-xs md:text-sm text-gray-500 dark:text-gray-400 mt-1">Dec 15, 2025 • 3.8 MB</p>
+                    </div>
+                    <button class="w-10 h-10 rounded-full bg-gray-100/50 dark:bg-gray-800/50 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 flex items-center justify-center transition-colors">
+                        <i class="fa-solid fa-download"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Global Toast for Alerts -->
+    <div id="toast" class="fixed bottom-[-100px] left-1/2 transform -translate-x-1/2 bg-gray-900 dark:bg-white text-white dark:text-gray-900 px-6 py-3 rounded-full text-sm font-semibold shadow-2xl z-[100] whitespace-nowrap opacity-0 invisible">
+        Message goes here
+    </div>
+
+    <!-- JavaScript Application Logic -->
+    <script>
+        // --- 1. Dashboard Clock Logic ---
+        function updateClock() {
+            const now = new Date();
+            const timeElement = document.getElementById('time');
+            const dateElement = document.getElementById('date');
+
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            timeElement.textContent = `${hours}:${minutes}`;
+
+            const options = { weekday: 'long', month: 'short', day: 'numeric' };
+            dateElement.textContent = now.toLocaleDateString('en-US', options);
+        }
+        setInterval(updateClock, 1000);
+        updateClock();
+
+        // --- 2. Dashboard App Search Logic ---
+        const searchInput = document.getElementById('appSearch');
+        const appItems = document.querySelectorAll('.app-item');
+        const noResults = document.getElementById('noResults');
+
+        searchInput.addEventListener('input', (e) => {
+            const term = e.target.value.toLowerCase();
+            let visibleCount = 0;
+
+            appItems.forEach(item => {
+                const keywords = item.getAttribute('data-name');
+                const label = item.querySelector('.app-label').textContent.toLowerCase();
+                
+                if (keywords.includes(term) || label.includes(term)) {
+                    item.classList.remove('hidden-app');
+                    visibleCount++;
+                } else {
+                    item.classList.add('hidden-app');
+                }
+            });
+
+            noResults.style.display = visibleCount === 0 ? 'block' : 'none';
+        });
+
+        // --- 3. Theme Logic ---
+        function toggleTheme() {
+            const html = document.documentElement;
+            if (html.classList.contains('dark')) {
+                html.classList.remove('dark');
+                localStorage.theme = 'light';
+            } else {
+                html.classList.add('dark');
+                localStorage.theme = 'dark';
+            }
+        }
+
+        // --- 4. Navigation Logic ---
+        function switchView(viewId) {
+            document.querySelectorAll('.app-view').forEach(v => v.classList.remove('active'));
+            if(viewId !== 'home-dashboard') {
+                document.getElementById(viewId).classList.add('active');
+            }
+        }
+
+        function openApp(appId, title) {
+            // Setup Header
+            document.getElementById('top-title').innerText = title;
+            document.getElementById('home-dashboard').style.display = 'none';
+            
+            const subHeader = document.getElementById('sub-app-header');
+            subHeader.classList.remove('hidden');
+            subHeader.classList.add('flex');
+            
+            // Show App View
+            switchView('view-' + appId);
+
+            // App specifics
+            if (appId === 'attendance') startCamera();
+        }
+
+        function goHome() {
+            // Restore Dashboard
+            document.getElementById('home-dashboard').style.display = 'flex';
+            
+            const subHeader = document.getElementById('sub-app-header');
+            subHeader.classList.add('hidden');
+            subHeader.classList.remove('flex');
+            
+            switchView('home-dashboard'); // Closes active app views
+            
+            // Cleanup actions
+            stopCamera();
+            if (isRecording) toggleRecording(); 
+        }
+
+        function showToast(message, duration = 3000) {
+            const toast = document.getElementById('toast');
+            toast.innerText = message;
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), duration);
+        }
+
+        // --- 5. Smart Minutes Logic ---
+        let recognition = null;
+        let isRecording = false;
+        let fullTranscript = "";
+        const transcriptBox = document.getElementById('live-transcript');
+        const micBtn = document.getElementById('mic-btn');
+        const genBtn = document.getElementById('generate-btn');
+        const apiKey = ""; // Gemini API Key goes here
+
+        if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+            const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+            recognition = new SpeechRec();
+            recognition.continuous = true;
+            recognition.interimResults = true;
+            recognition.lang = 'en-NG';
+
+            recognition.onresult = (event) => {
+                let interimTranscript = '';
+                let finalSegment = '';
+
+                for (let i = event.resultIndex; i < event.results.length; ++i) {
+                    if (event.results[i].isFinal) finalSegment += event.results[i][0].transcript;
+                    else interimTranscript += event.results[i][0].transcript;
+                }
+                
+                if (finalSegment) fullTranscript += finalSegment + " ";
+                transcriptBox.value = fullTranscript + interimTranscript;
+                transcriptBox.scrollTop = transcriptBox.scrollHeight;
+                if (transcriptBox.value.trim().length > 10) genBtn.disabled = false;
+            };
+
+            recognition.onerror = (e) => {
+                if (e.error === 'not-allowed') { showToast("Microphone access denied."); stopRecordingUI(); }
+            };
+            recognition.onend = () => { if (isRecording) try { recognition.start(); } catch(e){} };
+        } else {
+            transcriptBox.placeholder = "Speech recognition unsupported. Type manually.";
+            transcriptBox.addEventListener('input', () => genBtn.disabled = transcriptBox.value.trim().length < 10);
+        }
+
+        function toggleRecording() {
+            if (!recognition) { showToast("Speech API not supported here."); return; }
+            if (isRecording) {
+                isRecording = false; recognition.stop(); stopRecordingUI();
+            } else {
+                isRecording = true; fullTranscript = transcriptBox.value; 
+                try {
+                    recognition.start();
+                    micBtn.classList.add('recording-pulse');
+                    micBtn.innerHTML = '<i class="fa-solid fa-stop"></i>';
+                    showToast("Listening...");
+                } catch (e) { console.error(e); }
+            }
+        }
+
+        function stopRecordingUI() {
+            micBtn.classList.remove('recording-pulse');
+            micBtn.innerHTML = '<i class="fa-solid fa-microphone"></i>';
+        }
+
+        async function generateMinutes() {
+            const text = transcriptBox.value.trim();
+            if (!text) return;
+
+            const btn = document.getElementById('generate-btn');
+            btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin mr-2 text-amber-300"></i> Generating...';
+            btn.disabled = true;
+
+            const prompt = `You are an administrative assistant for LASUFOCIT. Transform this raw transcript into a structured, professional set of meeting minutes. HTML output with <h3>, <ul>, <li>, <strong>. Include <h3>Meeting Minutes</h3>, <strong>Date:</strong> [Current Date], <h3>1. Key Discussion Points</h3>, <h3>2. Decisions Made</h3>, <h3>3. Action Items</h3>. Transcript: "${text}"`;
+
+            try {
+                const response = await fetchWithRetry(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig: { temperature: 0.3 } })
+                });
+
+                const data = await response.json();
+                let htmlContent = data.candidates?.[0]?.content?.parts?.[0]?.text || "<p>Failed to generate minutes.</p>";
+                htmlContent = htmlContent.replace(/```html|```/g, '');
+
+                document.getElementById('output-container').classList.remove('hidden');
+                document.getElementById('output-container').classList.add('flex');
+                document.getElementById('final-minutes').innerHTML = htmlContent;
+                document.getElementById('final-minutes').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+            } catch (error) {
+                showToast("AI Generation Failed. Verify API Key.");
+                document.getElementById('output-container').classList.remove('hidden');
+                document.getElementById('output-container').classList.add('flex');
+                document.getElementById('final-minutes').innerHTML = `<p class="text-red-500">Error: ${error.message}</p><p>${text}</p>`;
+            } finally {
+                btn.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles mr-2 text-amber-300"></i> Generate Official Minutes';
+                btn.disabled = false;
+            }
+        }
+
+        function copyMinutes() {
+            const content = document.getElementById('final-minutes').innerText;
+            const textArea = document.createElement("textarea");
+            textArea.value = content; document.body.appendChild(textArea);
+            textArea.select();
+            try { document.execCommand('copy'); showToast("Copied to clipboard!"); } 
+            catch (err) { showToast("Failed to copy."); }
+            document.body.removeChild(textArea);
+        }
+
+        async function fetchWithRetry(url, options, retries = 5, delay = 1000) {
+            try {
+                const res = await fetch(url, options);
+                if (!res.ok) throw new Error(`HTTP status: ${res.status}`);
+                return res;
+            } catch (error) {
+                if (retries > 0) {
+                    await new Promise(r => setTimeout(r, delay));
+                    return fetchWithRetry(url, options, retries - 1, delay * 2);
+                } else throw error;
+            }
+        }
+
+        // --- 6. Facial Recognition Logic ---
+        let videoStream = null;
+        const videoElement = document.getElementById('camera-feed');
+        const scanOverlay = document.getElementById('scan-overlay');
+        const presentStaff = new Set();
+        
+        const staffDB = [
+            { id: "STAFF001", name: "Prof. O. A. Adebayo", role: "Dean, LASUFOCIT" },
+            { id: "STAFF002", name: "Dr. Mrs. K. Ibrahim", role: "HOD, Computer Science" },
+            { id: "STAFF003", name: "Mr. T. Johnson", role: "Lecturer II" },
+            { id: "STAFF004", name: "Dr. S. Olatunji", role: "Assoc. Professor" },
+            { id: "STAFF005", name: "Mrs. F. Balogun", role: "Faculty Officer" }
+        ];
+
+        async function startCamera() {
+            try {
+                videoStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } } });
+                videoElement.srcObject = videoStream;
+            } catch (err) { showToast("Camera access denied."); }
+        }
+
+        function stopCamera() {
+            if (videoStream) {
+                videoStream.getTracks().forEach(track => track.stop());
+                videoStream = null; videoElement.srcObject = null;
+            }
+        }
+
+        function simulateFaceScan() {
+            if (!videoStream) { showToast("Grant camera permissions first."); return; }
+            const btn = document.getElementById('scan-btn');
+            btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-xl"></i> Scanning...';
+            scanOverlay.classList.add('scanning');
+            
+            setTimeout(() => {
+                scanOverlay.classList.remove('scanning');
+                btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-face-viewfinder text-xl"></i> Scan Face';
+
+                const availableStaff = staffDB.filter(s => !presentStaff.has(s.id));
+                if (availableStaff.length > 0) {
+                    if (Math.random() > 0.15) {
+                        markAttendance(availableStaff[Math.floor(Math.random() * availableStaff.length)]);
+                    } else {
+                        showToast("Face not recognized. Try again.");
+                        scanOverlay.style.borderColor = "#ef4444"; 
+                        setTimeout(() => scanOverlay.style.borderColor = "transparent", 1000);
+                    }
+                } else { showToast("All registered staff marked present."); }
+            }, 1500);
+        }
+
+        function markAttendance(user) {
+            presentStaff.add(user.id);
+            document.getElementById('empty-state')?.remove();
+            
+            const timeString = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+            const li = document.createElement('li');
+            li.className = "flex justify-between items-center p-3 my-1 rounded-2xl bg-white/50 dark:bg-gray-800/50 border border-white/40 dark:border-gray-700/50 hover:bg-white/80 dark:hover:bg-gray-700/80 transition-all shadow-sm";
+            const initials = user.name.split(' ').map(n=>n[0]).join('').substring(0,2).toUpperCase();
+            
+            li.innerHTML = `
+                <div class="flex items-center gap-4">
+                    <div class="bg-blue-100/80 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 w-11 h-11 rounded-full flex items-center justify-center font-bold text-sm shadow-sm border border-blue-200 dark:border-blue-800/50">
+                        ${initials}
+                    </div>
+                    <div>
+                        <div class="font-bold text-[15px] text-gray-800 dark:text-gray-200 leading-tight">${user.name}</div>
+                        <div class="text-xs font-medium text-gray-500 dark:text-gray-400 mt-0.5">${user.role}</div>
+                    </div>
+                </div>
+                <div class="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50/80 dark:bg-emerald-900/30 px-2.5 py-1.5 rounded-lg border border-emerald-100 dark:border-emerald-800/30">
+                    ${timeString}
+                </div>
+            `;
+            
+            const list = document.getElementById('attendance-list');
+            list.insertBefore(li, list.firstChild);
+            document.getElementById('attendance-count').innerText = presentStaff.size;
+            showToast(`${user.name} marked present!`);
+            
+            scanOverlay.style.backgroundColor = "rgba(16, 185, 129, 0.2)";
+            setTimeout(() => scanOverlay.style.backgroundColor = "transparent", 400);
+        }
+
+        // --- 7. Noticeboard Slideshow Logic ---
+        let currentSlide = 0;
+        const totalSlides = 3;
+        let slideInterval;
+
+        function updateSlider() {
+            const slider = document.getElementById('notice-slider');
+            const indicators = document.getElementById('slide-indicators');
+            
+            if (!slider || !indicators) return;
+
+            // Move the slider
+            slider.style.transform = `translateX(-${currentSlide * 100}%)`;
+            
+            // Update dots
+            Array.from(indicators.children).forEach((dot, index) => {
+                if (index === currentSlide) {
+                    dot.className = "w-6 h-1.5 rounded-full bg-white transition-all duration-300";
+                } else {
+                    dot.className = "w-1.5 h-1.5 rounded-full bg-white/50 transition-all duration-300";
+                }
+            });
+        }
+
+        function nextSlide() {
+            currentSlide = (currentSlide + 1) % totalSlides;
+            updateSlider();
+            resetSlideInterval();
+        }
+
+        function prevSlide() {
+            currentSlide = (currentSlide - 1 + totalSlides) % totalSlides;
+            updateSlider();
+            resetSlideInterval();
+        }
+
+        function resetSlideInterval() {
+            clearInterval(slideInterval);
+            slideInterval = setInterval(nextSlide, 5000); // Auto-slide every 5 seconds
+        }
+
+        // Initialize Slider Interval
+        slideInterval = setInterval(nextSlide, 5000);
+    </script>
+</body>
+</html>

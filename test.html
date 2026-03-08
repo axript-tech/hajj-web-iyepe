@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>My OS | Personal Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --bg-gradient: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            --glass-bg: rgba(255, 255, 255, 0.85);
+            --glass-border: rgba(255, 255, 255, 0.5);
+            --text-primary: #1f2937;
+            --text-secondary: #6b7280;
+            --icon-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            --app-hover: translateY(-3px);
+        }
+
+        /* Dark Mode Support via media query */
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg-gradient: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+                --glass-bg: rgba(30, 41, 59, 0.7);
+                --glass-border: rgba(255, 255, 255, 0.1);
+                --text-primary: #f3f4f6;
+                --text-secondary: #9ca3af;
+                --icon-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            }
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: 'Roboto', sans-serif;
+            background: var(--bg-gradient);
+            min-height: 100vh;
+            color: var(--text-primary);
+            overflow-x: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        /* --- Header & Widget Section --- */
+        header {
+            width: 100%;
+            max-width: 800px;
+            padding: 40px 24px 20px;
+            text-align: center;
+        }
+
+        .widget-clock {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-bottom: 24px;
+        }
+
+        #time {
+            font-size: 3.5rem;
+            font-weight: 200;
+            letter-spacing: -1px;
+            line-height: 1;
+            margin-bottom: 5px;
+        }
+
+        #date {
+            font-size: 1rem;
+            color: var(--text-secondary);
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        /* --- Search Bar --- */
+        .search-container {
+            width: 100%;
+            position: relative;
+            margin-bottom: 20px;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 14px 20px 14px 45px;
+            border-radius: 30px;
+            border: 1px solid var(--glass-border);
+            background: var(--glass-bg);
+            backdrop-filter: blur(10px);
+            font-size: 1rem;
+            color: var(--text-primary);
+            outline: none;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        }
+
+        .search-input:focus {
+            box-shadow: 0 8px 15px rgba(0,0,0,0.1);
+            transform: scale(1.01);
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 18px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-secondary);
+        }
+
+        /* --- App Grid --- */
+        .app-drawer {
+            width: 100%;
+            max-width: 800px;
+            padding: 10px 20px 40px;
+            display: grid;
+            /* Mobile Default: 4 columns */
+            grid-template-columns: repeat(4, 1fr); 
+            gap: 24px 12px;
+            justify-items: center;
+        }
+
+        /* --- App Item Styling --- */
+        .app-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-decoration: none;
+            width: 76px; /* Fixed width for alignment */
+            cursor: pointer;
+            transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .app-item:hover {
+            transform: translateY(-5px);
+        }
+
+        .app-item:active {
+            transform: scale(0.92);
+        }
+
+        .app-icon {
+            width: 60px;
+            height: 60px;
+            border-radius: 16px; /* Squircle */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 26px;
+            color: white;
+            box-shadow: var(--icon-shadow);
+            margin-bottom: 8px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Subtle shine effect on icons */
+        .app-icon::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(to bottom right, rgba(255,255,255,0.4) 0%, rgba(255,255,255,0) 60%);
+            pointer-events: none;
+        }
+
+        .app-label {
+            font-size: 0.75rem;
+            color: var(--text-primary);
+            text-align: center;
+            font-weight: 500;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            width: 100%;
+            text-shadow: 0 1px 2px rgba(255,255,255,0.5);
+        }
+
+        @media (prefers-color-scheme: dark) {
+            .app-label { text-shadow: none; }
+        }
+
+        /* --- Icon Specific Colors --- */
+        .bg-blue { background: linear-gradient(135deg, #3b82f6, #2563eb); }
+        .bg-green { background: linear-gradient(135deg, #10b981, #059669); }
+        .bg-purple { background: linear-gradient(135deg, #8b5cf6, #7c3aed); }
+        .bg-orange { background: linear-gradient(135deg, #f59e0b, #d97706); }
+        .bg-red { background: linear-gradient(135deg, #ef4444, #dc2626); }
+        .bg-pink { background: linear-gradient(135deg, #ec4899, #db2777); }
+        .bg-teal { background: linear-gradient(135deg, #14b8a6, #0d9488); }
+        .bg-gray { background: linear-gradient(135deg, #6b7280, #4b5563); }
+        .bg-dark { background: linear-gradient(135deg, #1f2937, #111827); }
+
+        /* --- Responsive Breakpoints --- */
+        
+        /* Small phones */
+        @media (max-width: 360px) {
+            .app-drawer {
+                gap: 20px 8px;
+            }
+            .app-icon {
+                width: 54px;
+                height: 54px;
+                font-size: 22px;
+            }
+        }
+
+        /* Tablet */
+        @media (min-width: 600px) {
+            .app-drawer {
+                grid-template-columns: repeat(5, 1fr);
+                gap: 30px 20px;
+            }
+            .app-item { width: 90px; }
+            .app-icon {
+                width: 72px;
+                height: 72px;
+                border-radius: 18px;
+                font-size: 32px;
+            }
+            .app-label { font-size: 0.85rem; }
+        }
+
+        /* Desktop */
+        @media (min-width: 900px) {
+            .app-drawer {
+                grid-template-columns: repeat(6, 1fr);
+            }
+        }
+
+        /* --- Hidden State for Filtering --- */
+        .hidden {
+            display: none !important;
+        }
+
+        .no-results {
+            grid-column: 1 / -1;
+            text-align: center;
+            padding: 40px;
+            color: var(--text-secondary);
+            display: none;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="widget-clock">
+            <div id="time">12:00</div>
+            <div id="date">Monday, Jan 01</div>
+        </div>
+
+        <div class="search-container">
+            <i class="fas fa-search search-icon"></i>
+            <input type="text" class="search-input" id="appSearch" placeholder="Search apps...">
+        </div>
+    </header>
+
+    <main class="app-drawer" id="appDrawer">
+        <!-- Work & Productivity -->
+        <a href="#email" class="app-item" data-name="gmail email inbox work">
+            <div class="app-icon bg-red"><i class="fas fa-envelope"></i></div>
+            <span class="app-label">Gmail</span>
+        </a>
+
+        <a href="#calendar" class="app-item" data-name="calendar schedule events">
+            <div class="app-icon bg-blue"><i class="fas fa-calendar-check"></i></div>
+            <span class="app-label">Calendar</span>
+        </a>
+
+        <a href="#tasks" class="app-item" data-name="todo tasks list check">
+            <div class="app-icon bg-blue"><i class="fas fa-tasks"></i></div>
+            <span class="app-label">Tasks</span>
+        </a>
+
+        <a href="#drive" class="app-item" data-name="drive files cloud storage">
+            <div class="app-icon bg-green"><i class="fab fa-google-drive"></i></div>
+            <span class="app-label">Drive</span>
+        </a>
+
+        <!-- Finance -->
+        <a href="#bank" class="app-item" data-name="bank money finance">
+            <div class="app-icon bg-teal"><i class="fas fa-wallet"></i></div>
+            <span class="app-label">Banking</span>
+        </a>
+        
+        <a href="#crypto" class="app-item" data-name="crypto stocks market">
+            <div class="app-icon bg-dark"><i class="fas fa-chart-line"></i></div>
+            <span class="app-label">Stocks</span>
+        </a>
+
+        <!-- Development -->
+        <a href="#github" class="app-item" data-name="github code dev git">
+            <div class="app-icon bg-dark"><i class="fab fa-github"></i></div>
+            <span class="app-label">GitHub</span>
+        </a>
+
+        <a href="#vscode" class="app-item" data-name="vscode code editor">
+            <div class="app-icon bg-blue"><i class="fas fa-code"></i></div>
+            <span class="app-label">Code</span>
+        </a>
+
+        <a href="#terminal" class="app-item" data-name="terminal shell console">
+            <div class="app-icon bg-gray"><i class="fas fa-terminal"></i></div>
+            <span class="app-label">Term</span>
+        </a>
+
+        <!-- Social -->
+        <a href="#whatsapp" class="app-item" data-name="whatsapp chat message">
+            <div class="app-icon bg-green"><i class="fab fa-whatsapp"></i></div>
+            <span class="app-label">WhatsApp</span>
+        </a>
+
+        <a href="#linkedin" class="app-item" data-name="linkedin work social">
+            <div class="app-icon bg-blue"><i class="fab fa-linkedin-in"></i></div>
+            <span class="app-label">LinkedIn</span>
+        </a>
+
+        <a href="#twitter" class="app-item" data-name="twitter x social">
+            <div class="app-icon bg-dark"><i class="fab fa-x-twitter"></i></div>
+            <span class="app-label">X</span>
+        </a>
+
+        <!-- Entertainment -->
+        <a href="#youtube" class="app-item" data-name="youtube video watch">
+            <div class="app-icon bg-red"><i class="fab fa-youtube"></i></div>
+            <span class="app-label">YouTube</span>
+        </a>
+
+        <a href="#music" class="app-item" data-name="music spotify audio">
+            <div class="app-icon bg-green"><i class="fab fa-spotify"></i></div>
+            <span class="app-label">Spotify</span>
+        </a>
+
+        <a href="#gallery" class="app-item" data-name="photos gallery images">
+            <div class="app-icon bg-purple"><i class="fas fa-images"></i></div>
+            <span class="app-label">Photos</span>
+        </a>
+
+        <!-- Utilities -->
+        <a href="#settings" class="app-item" data-name="settings config gear">
+            <div class="app-icon bg-gray"><i class="fas fa-cog"></i></div>
+            <span class="app-label">Settings</span>
+        </a>
+
+        <a href="#maps" class="app-item" data-name="maps location gps">
+            <div class="app-icon bg-green"><i class="fas fa-map-marked-alt"></i></div>
+            <span class="app-label">Maps</span>
+        </a>
+
+        <a href="#notes" class="app-item" data-name="notes write text">
+            <div class="app-icon bg-orange"><i class="fas fa-sticky-note"></i></div>
+            <span class="app-label">Notes</span>
+        </a>
+        
+        <a href="#calculator" class="app-item" data-name="calculator math">
+            <div class="app-icon bg-orange"><i class="fas fa-calculator"></i></div>
+            <span class="app-label">Calc</span>
+        </a>
+
+        <a href="#health" class="app-item" data-name="health fitness gym">
+            <div class="app-icon bg-pink"><i class="fas fa-heartbeat"></i></div>
+            <span class="app-label">Health</span>
+        </a>
+
+        <div class="no-results" id="noResults">
+            <i class="fas fa-ghost" style="font-size: 2rem; margin-bottom: 10px; display: block;"></i>
+            No apps found
+        </div>
+    </main>
+
+    <script>
+        // 1. Clock Logic
+        function updateClock() {
+            const now = new Date();
+            const timeElement = document.getElementById('time');
+            const dateElement = document.getElementById('date');
+
+            // Format Time (HH:MM)
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            timeElement.textContent = `${hours}:${minutes}`;
+
+            // Format Date (Day, Month DD)
+            const options = { weekday: 'long', month: 'short', day: 'numeric' };
+            dateElement.textContent = now.toLocaleDateString('en-US', options);
+        }
+
+        setInterval(updateClock, 1000);
+        updateClock(); // Run immediately
+
+        // 2. Search Logic
+        const searchInput = document.getElementById('appSearch');
+        const appItems = document.querySelectorAll('.app-item');
+        const noResults = document.getElementById('noResults');
+
+        searchInput.addEventListener('input', (e) => {
+            const term = e.target.value.toLowerCase();
+            let visibleCount = 0;
+
+            appItems.forEach(item => {
+                const keywords = item.getAttribute('data-name');
+                const label = item.querySelector('.app-label').textContent.toLowerCase();
+                
+                if (keywords.includes(term) || label.includes(term)) {
+                    item.classList.remove('hidden');
+                    visibleCount++;
+                } else {
+                    item.classList.add('hidden');
+                }
+            });
+
+            // Show/Hide "No Results" message
+            if (visibleCount === 0) {
+                noResults.style.display = 'block';
+            } else {
+                noResults.style.display = 'none';
+            }
+        });
+    </script>
+</body>
+</html>
