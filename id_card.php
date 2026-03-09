@@ -6,7 +6,6 @@ require_once 'config/constants.php';
 $user_id = $_SESSION['user_id'];
 
 // Fetch Member Details
-// FIX: Changed m.blood_group to mp.blood_group as it resides in medical_profiles table
 $sql = "SELECT m.full_name, m.id, m.passport_photo, mp.blood_group, 
                mp.emergency_contact_name, mp.emergency_contact_phone,
                b.booking_status, p.name as package_name
@@ -22,7 +21,7 @@ $data = $conn->query($sql)->fetch_assoc();
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Pilgrim ID | <?php echo $data['full_name']; ?></title>
+    <title>Pilgrim ID | <?php echo htmlspecialchars($data['full_name']); ?></title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@500;700&display=swap" rel="stylesheet">
     <style>
@@ -33,18 +32,18 @@ $data = $conn->query($sql)->fetch_assoc();
             background-image: url('https://www.transparenttextures.com/patterns/arabesque.png'), linear-gradient(135deg, #1B7D75 0%, #115e59 100%);
             background-blend-mode: overlay;
         }
-        @media print {
-            body { background: white; margin: 0; display: flex; justify-content: center; align-items: center; height: 100vh; }
-            .no-print { display: none; }
-            .id-card { border: 1px solid #ddd; -webkit-print-color-adjust: exact; }
-        }
     </style>
 </head>
 <body class="flex flex-col items-center justify-center min-h-screen p-4">
 
-    <div class="no-print mb-6 flex gap-4">
+    <div class="mb-6 flex gap-4">
         <a href="dashboard.php" class="px-4 py-2 bg-gray-600 text-white rounded shadow hover:bg-gray-700">Back</a>
-        <button onclick="window.print()" class="px-4 py-2 bg-yellow-600 text-white rounded shadow hover:bg-yellow-700">Print Card</button>
+        
+        <!-- Updated to link to a hypothetical backend PDF generator -->
+        <a href="generate_id_pdf.php?user_id=<?php echo $user_id; ?>" target="_blank" class="px-4 py-2 bg-yellow-600 text-white rounded shadow hover:bg-yellow-700 flex items-center gap-2">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+            Download PDF
+        </a>
     </div>
 
     <!-- ID CARD FRONT -->
@@ -62,14 +61,14 @@ $data = $conn->query($sql)->fetch_assoc();
             <div class="w-32 h-32 bg-white p-1 rounded-full shadow-lg mb-4">
                 <div class="w-full h-full rounded-full overflow-hidden bg-gray-200">
                     <?php if($data['passport_photo']): ?>
-                        <img src="<?php echo $data['passport_photo']; ?>" class="w-full h-full object-cover">
+                        <img src="<?php echo htmlspecialchars($data['passport_photo']); ?>" class="w-full h-full object-cover">
                     <?php else: ?>
                         <div class="w-full h-full flex items-center justify-center text-gray-400 font-bold">NO IMG</div>
                     <?php endif; ?>
                 </div>
             </div>
             
-            <h2 class="text-xl font-bold text-center px-4 leading-tight mb-1"><?php echo $data['full_name']; ?></h2>
+            <h2 class="text-xl font-bold text-center px-4 leading-tight mb-1"><?php echo htmlspecialchars($data['full_name']); ?></h2>
             <p class="text-xs bg-yellow-500 text-deepGreen px-3 py-0.5 rounded-full font-bold shadow">
                 ID: <?php echo str_pad($data['id'], 6, '0', STR_PAD_LEFT); ?>
             </p>
@@ -80,18 +79,18 @@ $data = $conn->query($sql)->fetch_assoc();
             <div class="grid grid-cols-2 gap-4 text-xs mb-3">
                 <div>
                     <span class="block text-gray-400 uppercase text-[9px]">Package</span>
-                    <span class="font-bold text-deepGreen truncate block"><?php echo $data['package_name'] ?? 'Not Selected'; ?></span>
+                    <span class="font-bold text-deepGreen truncate block"><?php echo htmlspecialchars($data['package_name'] ?? 'Not Selected'); ?></span>
                 </div>
                 <div class="text-right">
                     <span class="block text-gray-400 uppercase text-[9px]">Blood Group</span>
-                    <span class="font-bold text-deepGreen"><?php echo $data['blood_group'] ?? 'N/A'; ?></span>
+                    <span class="font-bold text-deepGreen"><?php echo htmlspecialchars($data['blood_group'] ?? 'N/A'); ?></span>
                 </div>
             </div>
             
             <div class="border-t pt-2">
                 <span class="block text-gray-400 uppercase text-[9px] mb-1">In Case of Emergency</span>
-                <p class="font-bold text-sm leading-tight"><?php echo $data['emergency_contact_name']; ?></p>
-                <p class="text-deepGreen font-mono font-bold"><?php echo $data['emergency_contact_phone']; ?></p>
+                <p class="font-bold text-sm leading-tight"><?php echo htmlspecialchars($data['emergency_contact_name'] ?? 'N/A'); ?></p>
+                <p class="text-deepGreen font-mono font-bold"><?php echo htmlspecialchars($data['emergency_contact_phone'] ?? 'N/A'); ?></p>
             </div>
         </div>
 
