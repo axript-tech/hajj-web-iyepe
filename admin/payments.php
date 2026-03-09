@@ -10,7 +10,7 @@ if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'admin') {
     exit();
 }
 
-// Analytics Queries
+// Analytics Queries (Global regardless of filters)
 $total_revenue_res = $conn->query("SELECT SUM(amount) as total FROM payments WHERE status = 'success'");
 $total_revenue = $total_revenue_res->fetch_assoc()['total'] ?? 0;
 
@@ -20,29 +20,52 @@ $failed_payments = $failed_payments_res->fetch_assoc()['failed_count'] ?? 0;
 $disputes_res = $conn->query("SELECT COUNT(id) as pending_disputes FROM payment_disputes WHERE status = 'pending'");
 $pending_disputes = $disputes_res->fetch_assoc()['pending_disputes'] ?? 0;
 
+// --- SEARCH & FILTER LOGIC ---
+$search = isset($_GET['search']) ? $conn->real_escape_string($_GET['search']) : '';
+$status_filter = isset($_GET['status']) ? $conn->real_escape_string($_GET['status']) : '';
+$type_filter = isset($_GET['type']) ? $conn->real_escape_string($_GET['type']) : '';
+
+$where_clauses = ["1=1"];
+
+if (!empty($search)) {
+    $where_clauses[] = "(m.full_name LIKE '%$search%' OR p.reference_code LIKE '%$search%')";
+}
+if (!empty($status_filter)) {
+    $where_clauses[] = "p.status = '$status_filter'";
+}
+if (!empty($type_filter)) {
+    $where_clauses[] = "p.payment_type = '$type_filter'";
+}
+
+$where_sql = implode(' AND ', $where_clauses);
+
 // --- PAGINATION SETUP ---
 $limit = 15; // Number of entries to show in a page.
 $page = isset($_GET['page']) && is_numeric($_GET['page']) ? intval($_GET['page']) : 1;
 if ($page < 1) $page = 1;
 $offset = ($page - 1) * $limit;
 
-// Get total number of records for pagination math
-$total_records_query = $conn->query("SELECT COUNT(id) as count FROM payments");
+// Get total number of records for pagination math based on current filters
+$total_records_query = $conn->query("SELECT COUNT(p.id) as count FROM payments p JOIN members m ON p.member_id = m.id WHERE $where_sql");
 $total_records = $total_records_query->fetch_assoc()['count'];
 $total_pages = ceil($total_records / $limit);
 
-// Fetch paginated payments
+// Fetch paginated & filtered payments
 $sql = "SELECT p.*, m.full_name, m.passport_photo 
         FROM payments p 
         JOIN members m ON p.member_id = m.id 
+        WHERE $where_sql
         ORDER BY p.payment_date DESC 
         LIMIT $limit OFFSET $offset";
 $result = $conn->query($sql);
+
+// Helper for pagination links
+$filter_url_params = "?search=" . urlencode($search) . "&status=" . urlencode($status_filter) . "&type=" . urlencode($type_filter);
 ?>
 
 <?php include '../includes/header.php'; ?>
 
-<div class="mb-8 flex justify-between items-end">
+<div class="mb-8 flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
     <div>
         <h1 class="text-3xl font-bold text-deepGreen">Global Ledger</h1>
         <p class="text-gray-600 mt-1">Master view of all financial transactions.</p>
@@ -66,6 +89,38 @@ $result = $conn->query($sql);
         <p class="text-xs text-orange-500 uppercase font-bold mb-1">Pending Disputes</p>
         <h3 class="text-3xl font-bold text-orange-600"><?php echo number_format($pending_disputes); ?></h3>
     </div>
+</div>
+
+<!-- Search and Filter Bar -->
+<div class="bg-white p-4 rounded-xl shadow-sm border border-gray-200 mb-6">
+    <form method="GET" class="flex flex-col md:flex-row gap-4 items-center">
+        <div class="relative flex-grow w-full">
+            <i class="fas fa-search absolute left-3 top-3 text-gray-400"></i>
+            <input type="text" name="search" value="<?php echo htmlspecialchars($search); ?>" placeholder="Search by reference code or pilgrim name..." class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-deepGreen outline-none text-sm transition">
+        </div>
+        <div class="w-full md:w-auto">
+            <select name="type" class="w-full md:w-40 p-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-deepGreen outline-none bg-gray-50 text-gray-700">
+                <option value="">All Types</option>
+                <option value="commitment" <?php echo $type_filter === 'commitment' ? 'selected' : ''; ?>>Commitment</option>
+                <option value="installment" <?php echo $type_filter === 'installment' ? 'selected' : ''; ?>>Installment</option>
+                <option value="add_on" <?php echo $type_filter === 'add_on' ? 'selected' : ''; ?>>Add-On</option>
+            </select>
+        </div>
+        <div class="w-full md:w-auto">
+            <select name="status" class="w-full md:w-40 p-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-deepGreen outline-none bg-gray-50 text-gray-700">
+                <option value="">All Statuses</option>
+                <option value="success" <?php echo $status_filter === 'success' ? 'selected' : ''; ?>>Success</option>
+                <option value="pending" <?php echo $status_filter === 'pending' ? 'selected' : ''; ?>>Pending</option>
+                <option value="failed" <?php echo $status_filter === 'failed' ? 'selected' : ''; ?>>Failed</option>
+            </select>
+        </div>
+        <div class="flex gap-2 w-full md:w-auto">
+            <button type="submit" class="w-full md:w-auto bg-deepGreen text-white px-6 py-2.5 rounded-lg font-bold hover:bg-teal-800 transition shadow-sm text-sm">Filter</button>
+            <?php if(!empty($search) || !empty($status_filter) || !empty($type_filter)): ?>
+                <a href="payments.php" class="w-full md:w-auto bg-gray-100 text-gray-600 px-4 py-2.5 rounded-lg font-bold hover:bg-gray-200 transition border border-gray-300 text-sm text-center">Clear</a>
+            <?php endif; ?>
+        </div>
+    </form>
 </div>
 
 <!-- Transaction List -->
@@ -134,7 +189,10 @@ $result = $conn->query($sql);
                         </tr>
                     <?php endwhile; ?>
                 <?php else: ?>
-                    <tr><td colspan="6" class="p-8 text-center text-gray-500">No transactions recorded.</td></tr>
+                    <tr><td colspan="6" class="p-12 text-center text-gray-500">
+                        <i class="fas fa-wallet fa-3x mb-3 text-gray-300"></i>
+                        <p class="text-lg font-bold text-gray-400">No matching transactions found</p>
+                    </td></tr>
                 <?php endif; ?>
             </tbody>
         </table>
@@ -151,7 +209,7 @@ $result = $conn->query($sql);
             <div class="flex items-center gap-1">
                 <!-- Previous Button -->
                 <?php if ($page > 1): ?>
-                    <a href="?page=<?php echo $page - 1; ?>" class="px-3 py-1.5 bg-white border border-gray-300 text-gray-600 rounded-lg hover:bg-gray-100 transition text-xs font-bold shadow-sm">
+                    <a href="<?php echo $filter_url_params; ?>&page=<?php echo $page - 1; ?>" class="px-3 py-1.5 bg-white border border-gray-300 text-gray-600 rounded-lg hover:bg-gray-100 transition text-xs font-bold shadow-sm">
                         <i class="fas fa-chevron-left mr-1"></i> Prev
                     </a>
                 <?php else: ?>
@@ -168,13 +226,13 @@ $result = $conn->query($sql);
                     $end_page = min($total_pages, $page + 2);
                     
                     if ($start_page > 1) {
-                        echo '<a href="?page=1" class="px-3 py-1.5 bg-white border border-gray-300 text-gray-600 rounded-lg hover:bg-gray-100 transition text-xs font-bold shadow-sm">1</a>';
+                        echo '<a href="'.$filter_url_params.'&page=1" class="px-3 py-1.5 bg-white border border-gray-300 text-gray-600 rounded-lg hover:bg-gray-100 transition text-xs font-bold shadow-sm">1</a>';
                         if ($start_page > 2) echo '<span class="px-2 py-1.5 text-gray-400">...</span>';
                     }
 
                     for ($i = $start_page; $i <= $end_page; $i++): 
                     ?>
-                        <a href="?page=<?php echo $i; ?>" class="px-3 py-1.5 border rounded-lg transition text-xs font-bold shadow-sm <?php echo $i == $page ? 'bg-deepGreen text-white border-deepGreen' : 'bg-white border-gray-300 text-gray-600 hover:bg-gray-100'; ?>">
+                        <a href="<?php echo $filter_url_params; ?>&page=<?php echo $i; ?>" class="px-3 py-1.5 border rounded-lg transition text-xs font-bold shadow-sm <?php echo $i == $page ? 'bg-deepGreen text-white border-deepGreen' : 'bg-white border-gray-300 text-gray-600 hover:bg-gray-100'; ?>">
                             <?php echo $i; ?>
                         </a>
                     <?php 
@@ -182,7 +240,7 @@ $result = $conn->query($sql);
 
                     if ($end_page < $total_pages) {
                         if ($end_page < $total_pages - 1) echo '<span class="px-2 py-1.5 text-gray-400">...</span>';
-                        echo '<a href="?page=' . $total_pages . '" class="px-3 py-1.5 bg-white border border-gray-300 text-gray-600 rounded-lg hover:bg-gray-100 transition text-xs font-bold shadow-sm">' . $total_pages . '</a>';
+                        echo '<a href="'.$filter_url_params.'&page=' . $total_pages . '" class="px-3 py-1.5 bg-white border border-gray-300 text-gray-600 rounded-lg hover:bg-gray-100 transition text-xs font-bold shadow-sm">' . $total_pages . '</a>';
                     }
                     ?>
                 </div>
@@ -190,7 +248,7 @@ $result = $conn->query($sql);
 
                 <!-- Next Button -->
                 <?php if ($page < $total_pages): ?>
-                    <a href="?page=<?php echo $page + 1; ?>" class="px-3 py-1.5 bg-white border border-gray-300 text-gray-600 rounded-lg hover:bg-gray-100 transition text-xs font-bold shadow-sm">
+                    <a href="<?php echo $filter_url_params; ?>&page=<?php echo $page + 1; ?>" class="px-3 py-1.5 bg-white border border-gray-300 text-gray-600 rounded-lg hover:bg-gray-100 transition text-xs font-bold shadow-sm">
                         Next <i class="fas fa-chevron-right ml-1"></i>
                     </a>
                 <?php else: ?>

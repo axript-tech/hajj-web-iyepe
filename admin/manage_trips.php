@@ -4,7 +4,10 @@ session_start();
 require_once '../config/db.php';
 require_once '../config/constants.php';
 
-if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'admin') { /* header("Location: ../index.php"); */ }
+if (!isset($_SESSION['role']) || !in_array($_SESSION['role'], ['admin', 'manager'])) {
+    header("Location: ../index.php"); 
+    exit();
+}
 
 // --- HANDLE ACTIONS ---
 
@@ -108,7 +111,7 @@ if (isset($_GET['msg']) && $_GET['msg'] == 'updated') {
 
 // Fetch Batches with Counts
 $sql = "SELECT tb.*, p.name as package_name, 
-               (SELECT COUNT(*) FROM bookings WHERE trip_batch_id = tb.id) as pilgrim_count
+               (SELECT COUNT(*) FROM bookings WHERE trip_batch_id = tb.id AND booking_status != 'cancelled') as pilgrim_count
         FROM trip_batches tb
         JOIN packages p ON tb.package_id = p.id
         ORDER BY tb.start_date DESC";
