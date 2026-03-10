@@ -15,14 +15,26 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $phone = $conn->real_escape_string($_POST['phone']);
     $password = password_hash($_POST['password'], PASSWORD_DEFAULT);
     $dob = !empty($_POST['dob']) ? "'" . $conn->real_escape_string($_POST['dob']) . "'" : "NULL";
-    $nin = !empty($_POST['nin']) ? "'" . $conn->real_escape_string($_POST['nin']) . "'" : "NULL";
-    $passport_number = !empty($_POST['passport_number']) ? "'" . $conn->real_escape_string($_POST['passport_number']) . "'" : "NULL";
+    
+    // Extracted for duplicate validation
+    $nin_val = $conn->real_escape_string($_POST['nin']);
+    $passport_val = $conn->real_escape_string($_POST['passport_number']);
+    
+    $nin = !empty($nin_val) ? "'$nin_val'" : "NULL";
+    $passport_number = !empty($passport_val) ? "'$passport_val'" : "NULL";
     $passport_expiry = !empty($_POST['passport_expiry_date']) ? "'" . $conn->real_escape_string($_POST['passport_expiry_date']) . "'" : "NULL";
     
-    // Check for duplicate email
+    // Check for duplicate Email, NIN, or Passport Number
     $check_email = $conn->query("SELECT id FROM members WHERE email = '$email'");
+    $check_nin = !empty($nin_val) ? $conn->query("SELECT id FROM members WHERE nin = '$nin_val'") : false;
+    $check_passport = !empty($passport_val) ? $conn->query("SELECT id FROM members WHERE passport_number = '$passport_val'") : false;
+
     if ($check_email->num_rows > 0) {
         $error = "A pilgrim with this email address is already registered.";
+    } elseif ($check_nin && $check_nin->num_rows > 0) {
+        $error = "A pilgrim with this NIN is already registered.";
+    } elseif ($check_passport && $check_passport->num_rows > 0) {
+        $error = "A pilgrim with this Passport Number is already registered.";
     }
 
     if (empty($error)) {

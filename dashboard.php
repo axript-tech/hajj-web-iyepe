@@ -147,27 +147,34 @@ while($row = $alert_res->fetch_assoc()) { $alerts[] = $row; }
                     $balance = $booking['total_due'] - $booking['amount_paid'];
                     $percent = ($booking['total_due'] > 0) ? ($booking['amount_paid'] / $booking['total_due']) * 100 : 0;
                     
-                    $days_left = "TBD"; $travel_display = "Pending Dates";
-                    if (!empty($booking['start_date'])) {
-                        $ts = strtotime($booking['start_date']);
-                        $travel_display = date('F Y', $ts);
-                        if (isset($booking['trip_status'])) {
-                            if ($booking['trip_status'] === 'completed') $days_left = "Ended";
-                            elseif ($booking['trip_status'] === 'active') $days_left = "In Progress";
-                            else $days_left = floor(($ts - time()) / 86400) . " Days";
+                    $days_left = "TBD"; 
+                    $travel_display = "Awaiting Admin Allocation";
+                    if (!empty($booking['trip_batch_id'])) {
+                        $travel_display = htmlspecialchars($booking['batch_name']);
+                        if (!empty($booking['start_date'])) {
+                            $ts = strtotime($booking['start_date']);
+                            $travel_display .= " (" . date('F Y', $ts) . ")";
+                            if (isset($booking['trip_status'])) {
+                                if ($booking['trip_status'] === 'completed') $days_left = "Ended";
+                                elseif ($booking['trip_status'] === 'active') $days_left = "In Progress";
+                                else $days_left = floor(($ts - time()) / 86400) . " Days";
+                            }
                         }
                     }
                     $is_completed = (isset($booking['trip_status']) && $booking['trip_status'] == 'completed');
 
-                    // FETCH ADD-ONS FOR THIS SPECIFIC BOOKING
-                    $batch_id = $booking['trip_batch_id'];
-                    $b_id = $booking['id'];
-                    $addons_sql = "SELECT tai.*, pip.status as pip_status, pip.admin_note 
-                                   FROM trip_additional_items tai 
-                                   LEFT JOIN pilgrim_item_payments pip ON tai.id = pip.item_id AND pip.booking_id = '$b_id' 
-                                   WHERE tai.trip_batch_id = '$batch_id'";
-                    $addons_res = $conn->query($addons_sql);
-                    $has_addons = $addons_res && $addons_res->num_rows > 0;
+                    // FETCH ADD-ONS FOR THIS SPECIFIC BOOKING (Only if batch assigned)
+                    $has_addons = false;
+                    if (!empty($booking['trip_batch_id'])) {
+                        $batch_id = $booking['trip_batch_id'];
+                        $b_id = $booking['id'];
+                        $addons_sql = "SELECT tai.*, pip.status as pip_status, pip.admin_note 
+                                       FROM trip_additional_items tai 
+                                       LEFT JOIN pilgrim_item_payments pip ON tai.id = pip.item_id AND pip.booking_id = '$b_id' 
+                                       WHERE tai.trip_batch_id = '$batch_id'";
+                        $addons_res = $conn->query($addons_sql);
+                        $has_addons = $addons_res && $addons_res->num_rows > 0;
+                    }
                 ?>
 
                 <!-- Trip Card -->
@@ -180,6 +187,8 @@ while($row = $alert_res->fetch_assoc()) { $alerts[] = $row; }
                                 <h3 class="text-xl font-bold text-deepGreen"><?php echo $booking['package_name']; ?></h3>
                                 <?php if($is_completed): ?>
                                     <span class="text-[10px] bg-gray-200 text-gray-600 px-2 py-1 rounded-full font-bold uppercase tracking-wide">Archived</span>
+                                <?php elseif(empty($booking['trip_batch_id'])): ?>
+                                    <span class="text-[10px] bg-yellow-100 text-yellow-700 px-2 py-1 rounded-full font-bold uppercase tracking-wide border border-yellow-200">Pending Allocation</span>
                                 <?php else: ?>
                                     <span class="text-[10px] bg-blue-100 text-blue-700 px-2 py-1 rounded-full font-bold uppercase tracking-wide border border-blue-200">Active Booking</span>
                                 <?php endif; ?>
@@ -191,7 +200,9 @@ while($row = $alert_res->fetch_assoc()) { $alerts[] = $row; }
                             </p>
                         </div>
                         <div class="flex gap-2">
-                            <a href="group_chat.php?batch_id=<?php echo $booking['trip_batch_id']; ?>" class="bg-white border border-gray-200 hover:border-deepGreen hover:text-deepGreen text-gray-600 px-4 py-2 rounded-xl text-sm font-bold transition flex items-center gap-2 shadow-sm"><i class="fas fa-comments text-hajjGold"></i> Chat</a>
+                            <?php if(!empty($booking['trip_batch_id'])): ?>
+                                <a href="group_chat.php?batch_id=<?php echo $booking['trip_batch_id']; ?>" class="bg-white border border-gray-200 hover:border-deepGreen hover:text-deepGreen text-gray-600 px-4 py-2 rounded-xl text-sm font-bold transition flex items-center gap-2 shadow-sm"><i class="fas fa-comments text-hajjGold"></i> Chat</a>
+                            <?php endif; ?>
                             <a href="id_card.php?booking_id=<?php echo $booking['id']; ?>" target="_blank" class="bg-white border border-gray-200 hover:border-gray-800 hover:text-gray-800 text-gray-600 px-4 py-2 rounded-xl text-sm font-bold transition flex items-center gap-2 shadow-sm"><i class="fas fa-id-card"></i> ID</a>
                         </div>
                     </div>

@@ -32,12 +32,13 @@ function send_hajj_mail($to_email, $to_name, $subject, $message_body) {
     try {
         // Server settings
         $mail->isSMTP();
+        $mail->SMTPDebug = 0;
         $mail->Host       = 'smtp.hostinger.com'; // Replace with your SMTP Host (e.g., mail.yourdomain.com)
         $mail->SMTPAuth   = true;
         $mail->Username   = 'info@abdullateefhajjumrah.com'; // Replace with SMTP Username
-        $mail->Password   = 'Science!';    // Replace with SMTP Password
+        $mail->Password   = 'AxriptScience1!';    // Replace with SMTP Password
         $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
-        $mail->Port       = 465;
+        $mail->Port       = 587;
 
         // Recipients
         $mail->setFrom('info@abdullateefhajjumrah.com', 'Abdullateef Hajj & Umrah');

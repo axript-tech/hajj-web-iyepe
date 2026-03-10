@@ -30,6 +30,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_details'])) {
     $msg = "Member details updated successfully.";
 }
 
+// --- HANDLE BATCH ASSIGNMENT ---
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['assign_batch'])) {
+    $booking_id = intval($_POST['booking_id']);
+    $batch_id = intval($_POST['batch_id']);
+    
+    $batch_res = $conn->query("SELECT start_date FROM trip_batches WHERE id = '$batch_id'");
+    if ($batch_res->num_rows > 0) {
+        $travel_date = $batch_res->fetch_assoc()['start_date'];
+        $conn->query("UPDATE bookings SET trip_batch_id = '$batch_id', travel_date = '$travel_date' WHERE id = '$booking_id'");
+        $msg = "Pilgrim successfully assigned to the trip cohort.";
+        
+        // Send notification email
+        $member_email = $conn->query("SELECT email, full_name FROM members WHERE id = '$member_id'")->fetch_assoc();
+        $batch_name = $conn->query("SELECT batch_name FROM trip_batches WHERE id = '$batch_id'")->fetch_assoc()['batch_name'];
+        $msg_body = "You have been assigned to your travel cohort: <strong>$batch_name</strong>. You can now view your flight itinerary and access the group chat from your dashboard.";
+        require_once '../includes/mailer.php';
+        send_hajj_mail($member_email['email'], $member_email['full_name'], "Trip Cohort Assigned", $msg_body);
+    }
+}
+
 // --- HANDLE OFFLINE BOOKING & PAYMENT ---
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['book_offline'])) {
     $batch_id = intval($_POST['batch_id']);
@@ -96,8 +116,8 @@ $sql = "SELECT m.*, mp.blood_group, mp.genotype, mp.chronic_conditions, mp.mobil
         FROM members m LEFT JOIN medical_profiles mp ON m.id = mp.member_id WHERE m.id = '$member_id'";
 $member = $conn->query($sql)->fetch_assoc();
 
-// 2. Fetch Booking
-$booking = $conn->query("SELECT b.*, p.name as package_name, p.total_cost FROM bookings b LEFT JOIN packages p ON b.package_id = p.id WHERE b.member_id = '$member_id' ORDER BY b.created_at DESC LIMIT 1")->fetch_assoc();
+// 2. Fetch Booking (Including new flight details from trip_batches)
+$booking = $conn->query("SELECT b.*, p.name as package_name, p.total_cost, tb.batch_name, tb.flight_name, tb.flight_number FROM bookings b LEFT JOIN packages p ON b.package_id = p.id LEFT JOIN trip_batches tb ON b.trip_batch_id = tb.id WHERE b.member_id = '$member_id' ORDER BY b.created_at DESC LIMIT 1")->fetch_assoc();
 $total_cost = $booking['total_cost'] ?? 0;
 $total_paid = $booking['amount_paid'] ?? 0;
 if ($total_paid == 0 && $member['has_paid_commitment']) $total_paid = COMMITMENT_FEE;
@@ -213,9 +233,21 @@ while($mb = $my_bookings_res->fetch_assoc()) {
         
         <!-- Financial Overview -->
         <div class="bg-white rounded-xl shadow p-6 border-l-4 border-hajjGold">
-            <h3 class="font-bold text-gray-700 mb-4 flex justify-between">
+            <h3 class="font-bold text-gray-700 mb-4 flex justify-between items-start">
                 <span>Current Financial Status</span>
-                <span class="text-sm font-normal text-gray-500">Active Package: <strong class="text-black"><?php echo $booking['package_name'] ?? 'Not Selected'; ?></strong></span>
+                <div class="text-right">
+                    <span class="text-sm font-normal text-gray-500 block">Active Package: <strong class="text-black"><?php echo $booking['package_name'] ?? 'Not Selected'; ?></strong></span>
+                    
+                    <?php if($booking && empty($booking['trip_batch_id'])): ?>
+                        <span class="text-xs text-yellow-600 font-bold bg-yellow-50 px-2 py-1 rounded mt-1 inline-block border border-yellow-200"><i class="fas fa-clock"></i> Awaiting Batch Assignment</span>
+                    <?php elseif(!empty($booking['batch_name'])): ?>
+                        <span class="text-xs text-green-600 font-bold bg-green-50 px-2 py-1 rounded mt-1 inline-block border border-green-200"><i class="fas fa-check"></i> <?php echo htmlspecialchars($booking['batch_name']); ?></span>
+                    <?php endif; ?>
+
+                    <?php if(!empty($booking['flight_name'])): ?>
+                        <span class="text-xs text-gray-400 block mt-1"><i class="fas fa-plane text-deepGreen"></i> <?php echo htmlspecialchars($booking['flight_name'] . ' (' . $booking['flight_number'] . ')'); ?></span>
+                    <?php endif; ?>
+                </div>
             </h3>
             <div class="grid md:grid-cols-3 gap-6">
                 <div class="bg-gray-50 p-4 rounded border border-gray-200">
@@ -233,7 +265,39 @@ while($mb = $my_bookings_res->fetch_assoc()) {
             </div>
         </div>
 
-        <!-- Offline Booking Form (NEW) -->
+        <!-- Admin Batch Assignment Form (NEW) -->
+        <?php if ($booking && empty($booking['trip_batch_id'])): ?>
+        <div class="bg-yellow-50 rounded-xl shadow p-6 border border-yellow-200">
+            <h3 class="font-bold text-yellow-800 mb-4 flex items-center gap-2 border-b border-yellow-200 pb-2">
+                <i class="fas fa-users-cog text-yellow-600"></i> Assign to Trip Cohort
+            </h3>
+            <form method="POST" class="flex items-end gap-4">
+                <input type="hidden" name="booking_id" value="<?php echo $booking['id']; ?>">
+                <div class="flex-grow">
+                    <label class="block text-xs font-bold text-yellow-700 uppercase mb-1">Select Active Cohort for <?php echo htmlspecialchars($booking['package_name']); ?></label>
+                    <select name="batch_id" class="w-full p-2 border border-yellow-300 rounded focus:border-deepGreen outline-none text-sm bg-white" required>
+                        <option value="">-- Choose a Trip --</option>
+                        <?php 
+                        $pkg_id = $booking['package_id'];
+                        $pkg_batches = $conn->query("SELECT id, batch_name FROM trip_batches WHERE status != 'completed' AND package_id = '$pkg_id' ORDER BY start_date ASC");
+                        if ($pkg_batches->num_rows > 0): 
+                            while($b = $pkg_batches->fetch_assoc()): 
+                        ?>
+                                <option value="<?php echo $b['id']; ?>"><?php echo htmlspecialchars($b['batch_name']); ?></option>
+                            <?php endwhile; ?>
+                        <?php else: ?>
+                            <option value="" disabled>No active trips available for this package.</option>
+                        <?php endif; ?>
+                    </select>
+                </div>
+                <button type="submit" name="assign_batch" class="bg-yellow-600 text-white px-6 py-2 rounded font-bold hover:bg-yellow-700 transition shadow-md text-sm h-[38px]">
+                    Assign
+                </button>
+            </form>
+        </div>
+        <?php endif; ?>
+
+        <!-- Offline Booking Form (UPDATED TEXT) -->
         <div class="bg-white rounded-xl shadow p-6 border border-gray-200">
             <h3 class="font-bold text-gray-800 mb-4 flex items-center gap-2 border-b pb-2">
                 <i class="fas fa-hand-holding-usd text-deepGreen"></i> Assign Trip / Offline Payment

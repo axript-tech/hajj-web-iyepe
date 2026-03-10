@@ -15,6 +15,7 @@ if (!isset($_SESSION['role']) || !in_array($_SESSION['role'], ['admin', 'manager
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['create_batch'])) {
     $pkg_id = intval($_POST['package_id']);
     $name = $conn->real_escape_string($_POST['batch_name']);
+    $capacity = intval($_POST['capacity']); // New Capacity Field
     $start = $_POST['start_date'];
     $end = $_POST['return_date'];
     
@@ -28,8 +29,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['create_batch'])) {
     $ret_airport = $conn->real_escape_string($_POST['return_airport'] ?? '');
     $ret_terminal = $conn->real_escape_string($_POST['return_terminal'] ?? '');
     
-    $stmt = $conn->prepare("INSERT INTO trip_batches (package_id, batch_name, start_date, return_date, flight_name, flight_number, departure_airport, departure_terminal, return_flight_name, return_flight_number, return_airport, return_terminal) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-    $stmt->bind_param("isssssssssss", $pkg_id, $name, $start, $end, $flight_name, $flight_number, $dep_airport, $dep_terminal, $ret_flight_name, $ret_flight_number, $ret_airport, $ret_terminal);
+    $stmt = $conn->prepare("INSERT INTO trip_batches (package_id, batch_name, capacity, start_date, return_date, flight_name, flight_number, departure_airport, departure_terminal, return_flight_name, return_flight_number, return_airport, return_terminal) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+    $stmt->bind_param("isissssssssss", $pkg_id, $name, $capacity, $start, $end, $flight_name, $flight_number, $dep_airport, $dep_terminal, $ret_flight_name, $ret_flight_number, $ret_airport, $ret_terminal);
     
     if ($stmt->execute()) {
         $msg = "New Trip Batch created successfully.";
@@ -45,6 +46,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_batch'])) {
     $batch_id = intval($_POST['batch_id']);
     $pkg_id = intval($_POST['package_id']);
     $name = $conn->real_escape_string($_POST['batch_name']);
+    $capacity = intval($_POST['capacity']); // New Capacity Field
     $start = $_POST['start_date'];
     $end = $_POST['return_date'];
     
@@ -58,8 +60,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_batch'])) {
     $ret_airport = $conn->real_escape_string($_POST['return_airport'] ?? '');
     $ret_terminal = $conn->real_escape_string($_POST['return_terminal'] ?? '');
     
-    $stmt = $conn->prepare("UPDATE trip_batches SET package_id=?, batch_name=?, start_date=?, return_date=?, flight_name=?, flight_number=?, departure_airport=?, departure_terminal=?, return_flight_name=?, return_flight_number=?, return_airport=?, return_terminal=? WHERE id=?");
-    $stmt->bind_param("isssssssssssi", $pkg_id, $name, $start, $end, $flight_name, $flight_number, $dep_airport, $dep_terminal, $ret_flight_name, $ret_flight_number, $ret_airport, $ret_terminal, $batch_id);
+    $stmt = $conn->prepare("UPDATE trip_batches SET package_id=?, batch_name=?, capacity=?, start_date=?, return_date=?, flight_name=?, flight_number=?, departure_airport=?, departure_terminal=?, return_flight_name=?, return_flight_number=?, return_airport=?, return_terminal=? WHERE id=?");
+    $stmt->bind_param("isissssssssssi", $pkg_id, $name, $capacity, $start, $end, $flight_name, $flight_number, $dep_airport, $dep_terminal, $ret_flight_name, $ret_flight_number, $ret_airport, $ret_terminal, $batch_id);
     
     if ($stmt->execute()) {
         header("Location: manage_trips.php?msg=updated");
@@ -126,14 +128,14 @@ $packages = $conn->query("SELECT id, name FROM packages");
 <div class="mb-8 flex justify-between items-end">
     <div>
         <h1 class="text-3xl font-bold text-deepGreen">Trip Lifecycle Manager</h1>
-        <p class="text-gray-600 mt-1">Schedule cohorts, manage dates, flight info, and close completed trips.</p>
+        <p class="text-gray-600 mt-1">Schedule cohorts, manage capacities, flight info, and statuses.</p>
     </div>
-    <a href="dashboard.php" class="bg-gray-200 text-gray-700 px-4 py-2 rounded hover:bg-gray-300">Back</a>
+    <a href="dashboard.php" class="bg-gray-200 text-gray-700 px-4 py-2 rounded hover:bg-gray-300 font-bold">Back</a>
 </div>
 
 <?php if(isset($msg)): ?>
-    <div class="mb-6 p-4 rounded-lg <?php echo ($msg_type == 'success') ? 'bg-green-100 text-green-700 border-l-4 border-green-500' : 'bg-red-100 text-red-700 border-l-4 border-red-500'; ?>">
-        <?php echo $msg; ?>
+    <div class="mb-6 p-4 rounded-lg shadow-sm <?php echo ($msg_type == 'success') ? 'bg-green-100 text-green-700 border-l-4 border-green-500' : 'bg-red-100 text-red-700 border-l-4 border-red-500'; ?>">
+        <i class="fas <?php echo ($msg_type == 'success') ? 'fa-check-circle' : 'fa-exclamation-circle'; ?> mr-2"></i> <?php echo $msg; ?>
     </div>
 <?php endif; ?>
 
@@ -161,15 +163,24 @@ $packages = $conn->query("SELECT id, name FROM packages");
                                 while($p = $packages->fetch_assoc()): 
                                     $selected = ($edit_data && $edit_data['package_id'] == $p['id']) ? 'selected' : '';
                             ?>
-                                <option value="<?php echo $p['id']; ?>" <?php echo $selected; ?>><?php echo $p['name']; ?></option>
+                                <option value="<?php echo $p['id']; ?>" <?php echo $selected; ?>><?php echo htmlspecialchars($p['name']); ?></option>
                             <?php endwhile; } ?>
                         </select>
                     </div>
-                    <div>
-                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Batch Name</label>
-                        <input type="text" name="batch_name" 
-                               value="<?php echo $edit_data ? htmlspecialchars($edit_data['batch_name']) : ''; ?>" 
-                               placeholder="e.g. Hajj 2026 Group A" class="w-full p-2 border rounded focus:border-deepGreen" required>
+                    
+                    <div class="grid grid-cols-3 gap-4">
+                        <div class="col-span-2">
+                            <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Batch Name</label>
+                            <input type="text" name="batch_name" 
+                                   value="<?php echo $edit_data ? htmlspecialchars($edit_data['batch_name']) : ''; ?>" 
+                                   placeholder="e.g. Hajj 2026 Group A" class="w-full p-2 border rounded focus:border-deepGreen" required>
+                        </div>
+                        <div class="col-span-1">
+                            <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Capacity</label>
+                            <input type="number" name="capacity" min="1"
+                                   value="<?php echo $edit_data ? intval($edit_data['capacity'] ?? 50) : '50'; ?>" 
+                                   placeholder="e.g. 50" class="w-full p-2 border rounded focus:border-deepGreen" required>
+                        </div>
                     </div>
                     
                     <div class="grid grid-cols-2 gap-4">
@@ -280,15 +291,21 @@ $packages = $conn->query("SELECT id, name FROM packages");
                 </thead>
                 <tbody class="divide-y divide-gray-100 text-sm">
                     <?php if($batches->num_rows > 0): while($row = $batches->fetch_assoc()): 
-                        $status_color = 'bg-blue-100 text-blue-700'; // upcoming
-                        if($row['status'] == 'active') $status_color = 'bg-green-100 text-green-700 animate-pulse';
-                        if($row['status'] == 'completed') $status_color = 'bg-gray-100 text-gray-500';
+                        $status_color = 'bg-blue-100 text-blue-700 border border-blue-200'; // upcoming
+                        if($row['status'] == 'active') $status_color = 'bg-green-100 text-green-700 border border-green-200 animate-pulse';
+                        if($row['status'] == 'completed') $status_color = 'bg-gray-100 text-gray-500 border border-gray-200';
+                        
+                        $capacity = intval($row['capacity'] ?? 50);
+                        $is_full = ($row['pilgrim_count'] >= $capacity);
                     ?>
-                        <tr class="hover:bg-gray-50 transition">
+                        <tr class="hover:bg-gray-50 transition <?php echo $row['status'] == 'completed' ? 'opacity-70' : ''; ?>">
                             <td class="p-4 align-top w-1/3">
                                 <p class="font-bold text-deepGreen"><?php echo htmlspecialchars($row['batch_name']); ?></p>
                                 <p class="text-xs text-gray-500 mb-2"><?php echo htmlspecialchars($row['package_name']); ?></p>
-                                <span class="bg-gray-200 px-2 py-1 rounded text-xs font-bold"><i class="fas fa-users text-gray-500 mr-1"></i> <?php echo $row['pilgrim_count']; ?> Pilgrims</span>
+                                <span class="bg-gray-100 px-2 py-1 rounded text-xs font-bold border border-gray-200 shadow-sm inline-flex items-center gap-1 <?php echo $is_full ? 'text-red-600 border-red-200' : 'text-gray-600'; ?>">
+                                    <i class="fas fa-users <?php echo $is_full ? 'text-red-400' : 'text-gray-400'; ?>"></i> 
+                                    <?php echo $row['pilgrim_count']; ?> / <?php echo $capacity; ?> Filled
+                                </span>
                             </td>
                             <td class="p-4 text-gray-600 text-xs align-top space-y-2">
                                 <!-- Departure Info -->
@@ -320,14 +337,14 @@ $packages = $conn->query("SELECT id, name FROM packages");
                                 </div>
                             </td>
                             <td class="p-4 text-center align-top">
-                                <span class="px-2 py-1 rounded text-[10px] font-bold uppercase <?php echo $status_color; ?>">
+                                <span class="px-2 py-1 rounded text-[10px] font-bold uppercase shadow-sm <?php echo $status_color; ?>">
                                     <?php echo $row['status']; ?>
                                 </span>
                             </td>
                             <td class="p-4 text-right align-top">
                                 <div class="flex flex-col items-end gap-2">
                                     <!-- Edit Button -->
-                                    <a href="manage_trips.php?edit_id=<?php echo $row['id']; ?>" class="text-xs bg-white border border-gray-300 text-gray-600 px-3 py-1 rounded hover:bg-gray-50 transition shadow-sm w-full text-center">
+                                    <a href="manage_trips.php?edit_id=<?php echo $row['id']; ?>" class="text-xs bg-white border border-gray-300 text-gray-600 px-3 py-1 rounded hover:bg-gray-50 transition shadow-sm w-full text-center font-bold">
                                         <i class="fas fa-edit"></i> Edit
                                     </a>
 
@@ -336,20 +353,20 @@ $packages = $conn->query("SELECT id, name FROM packages");
                                         <input type="hidden" name="batch_id" value="<?php echo $row['id']; ?>">
                                         
                                         <?php if($row['status'] == 'upcoming'): ?>
-                                            <button type="submit" name="update_status" value="active" class="w-full text-xs bg-green-500 text-white px-3 py-1 rounded hover:bg-green-600 shadow-sm" title="Start Trip">
+                                            <button type="submit" name="update_status" value="active" class="w-full text-xs bg-green-500 text-white px-3 py-1 rounded hover:bg-green-600 shadow-sm font-bold" title="Start Trip">
                                                 Depart
                                             </button>
                                         
                                         <?php elseif($row['status'] == 'active'): ?>
-                                            <button type="button" class="w-full text-xs bg-gray-800 text-white px-3 py-1 rounded hover:bg-black shadow-sm mb-1" title="End Trip" onclick="confirmTripCompletion(this, 'completed')">
+                                            <button type="button" class="w-full text-xs bg-gray-800 text-white px-3 py-1 rounded hover:bg-black shadow-sm mb-1 font-bold" title="End Trip" onclick="confirmTripCompletion(this, 'completed')">
                                                 Complete
                                             </button>
-                                            <button type="submit" name="update_status" value="upcoming" class="w-full text-[10px] text-gray-400 hover:text-red-500 underline text-right" title="Undo Departure">
+                                            <button type="submit" name="update_status" value="upcoming" class="w-full text-[10px] text-gray-400 hover:text-red-500 underline text-right font-bold" title="Undo Departure">
                                                 Undo
                                             </button>
                                         
                                         <?php elseif($row['status'] == 'completed'): ?>
-                                            <button type="submit" name="update_status" value="active" class="w-full text-xs border border-orange-500 text-orange-500 px-3 py-1 rounded hover:bg-orange-50 shadow-sm" title="Reopen Trip">
+                                            <button type="submit" name="update_status" value="active" class="w-full text-xs border border-orange-500 text-orange-500 px-3 py-1 rounded hover:bg-orange-50 shadow-sm font-bold" title="Reopen Trip">
                                                 Reopen
                                             </button>
                                         <?php endif; ?>
@@ -367,29 +384,15 @@ $packages = $conn->query("SELECT id, name FROM packages");
 </div>
 
 <script>
-    // Intercept and use AppUI for form submission confirmation
     function confirmTripCompletion(btn, statusValue) {
-        if(typeof AppUI !== 'undefined') {
-            AppUI.confirm('Confirm Trip Completion?<br><br><span class="text-sm font-normal text-gray-500">This will officially conclude the journey and archive all associated pilgrim bookings.</span>', () => {
-                const form = btn.closest('form');
-                const input = document.createElement('input');
-                input.type = 'hidden';
-                input.name = 'update_status';
-                input.value = statusValue;
-                form.appendChild(input);
-                form.submit();
-            });
-        } else {
-            // Fallback just in case
-            if(confirm("Confirm Trip Completion?")) {
-                const form = btn.closest('form');
-                const input = document.createElement('input');
-                input.type = 'hidden';
-                input.name = 'update_status';
-                input.value = statusValue;
-                form.appendChild(input);
-                form.submit();
-            }
+        if(confirm("Confirm Trip Completion?\n\nThis will officially conclude the journey and archive all associated pilgrim bookings.")) {
+            const form = btn.closest('form');
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = 'update_status';
+            input.value = statusValue;
+            form.appendChild(input);
+            form.submit();
         }
     }
 </script>

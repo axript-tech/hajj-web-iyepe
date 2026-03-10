@@ -28,8 +28,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         // 2. Update Member Status (Unlock Gate 1)
         $conn->query("UPDATE members SET has_completed_health = 1 WHERE id = '$user_id'");
         
-        // Redirect to next Gate
-        header("Location: make_commitment.php");
+        // Redirect to dashboard (Commitment is now handled during package selection)
+        header("Location: dashboard.php");
         exit();
     } else {
         $error = "Error saving profile: " . $conn->error;

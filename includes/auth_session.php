@@ -33,13 +33,6 @@ if ($user['has_completed_health'] == 0 && $current_page != 'health_profile.php')
     exit();
 }
 
-// 4. Gate 2: Commitment Fee Check
-// If health IS done, but Commitment is NOT paid, and user is not on payment page, redirect.
-if ($user['has_completed_health'] == 1 && $user['has_paid_commitment'] == 0 && $current_page != 'make_commitment.php') {
-    // Exception: Allow them to view health profile if they want to edit it
-    if ($current_page != 'health_profile.php') {
-        header("Location: make_commitment.php?msg=commitment_required");
-        exit();
-    }
-}
+// NOTE: Gate 2 (Commitment Fee Check) has been removed from the global session auth. 
+// Pilgrims can now access the dashboard and will only be prompted for commitment when selecting a package.
 ?>
